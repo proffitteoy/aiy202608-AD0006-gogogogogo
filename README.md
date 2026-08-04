@@ -9,6 +9,7 @@ RiskTrace 是面向证券研究员、资管研究团队和风险研究岗位的�
 - `apps/web`：Next.js / React / TypeScript 桌面 Web 入口。
 - `apps/api`：Python 3.13 / FastAPI 模块化后端、SQLAlchemy 核心模型与 Alembic 迁移。
 - `compose.yaml`：PostgreSQL、Redis、MinIO、API 和 Web 的本地完整编排。
+- `apps/*/vendor` 与 `infra/pgvector`：从已核对上游项目提取的组件源码、构建产物和许可证。
 - 真实运行链路：Web 同源代理 → FastAPI 就绪接口 → PostgreSQL / Redis / MinIO 探测。
 
 当前页面不会展示伪事件数据。历史回放、事件聚类、研究工作台和 LLM 语义层仍待后续迭代。
