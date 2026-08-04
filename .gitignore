@@ -12,9 +12,13 @@ __pycache__/
 htmlcov/
 .venv/
 apps/api/.venv/
+.uv-cache/
+.uv-python/
 
 # Node / Next.js
 node_modules/
+.npm-cache/
+apps/web/.vendor-pack/
 apps/web/.next/
 apps/web/out/
 *.tsbuildinfo

@@ -8,6 +8,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 COPY pyproject.toml uv.lock README.md ./
+COPY vendor ./vendor
 RUN uv sync --frozen --no-dev
 
 COPY alembic.ini ./

@@ -10,8 +10,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@xyflow/react": "12.11.2",
-    "echarts": "6.1.0",
+    "@xyflow/react": "file:vendor/xyflow-react",
+    "@xyflow/system": "file:vendor/xyflow-system",
+    "echarts": "file:vendor/echarts",
     "next": "^16.0.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"

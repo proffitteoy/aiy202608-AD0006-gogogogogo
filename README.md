@@ -83,6 +83,7 @@ RiskTrace/
 ├── apps/
 │   ├── api/                  FastAPI、核心模型、迁移与测试
 │   └── web/                  Next.js 桌面 Web
+├── infra/                    从上游源码提取的基础设施组件
 ├── docs/                     产品与工程设计基线
 ├── .env.example              本地配置示例
 ├── compose.yaml              完整本地栈

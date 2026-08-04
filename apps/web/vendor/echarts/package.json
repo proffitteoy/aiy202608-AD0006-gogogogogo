@@ -1,0 +1,12 @@
+{
+  "name": "echarts",
+  "version": "6.1.0-risktrace-vendored",
+  "description": "Vendored Apache ECharts implementation for RiskTrace",
+  "type": "module",
+  "main": "./dist/echarts.esm.min.mjs",
+  "module": "./dist/echarts.esm.min.mjs",
+  "exports": {
+    ".": "./dist/echarts.esm.min.mjs"
+  },
+  "license": "Apache-2.0"
+}

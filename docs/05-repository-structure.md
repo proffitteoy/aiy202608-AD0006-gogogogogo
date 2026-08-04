@@ -25,6 +25,9 @@ RiskTrace 当前采用一个仓库、两个应用的轻量结构，不拆分微�
 | `apps/api/src/risktrace/db` | SQLAlchemy 元数据与持久化模型 | 绕过租户和审计边界 |
 | `apps/api/migrations` | 可审查、可重放的数据库迁移 | 在应用启动时用 `create_all` 替代迁移 |
 | `apps/api/tests` | 后端边界和行为验证 | 依赖生产服务或外部付费接口 |
+| `apps/api/vendor` | 已提取的后端第三方实现与许可证 | 修改上游运行逻辑后不记录差异 |
+| `apps/web/vendor` | 已提取的前端可视化源码、构建产物与许可证 | 把尚未接入的组件描述为已运行 |
+| `infra/pgvector` | pgvector 0.8.6 本地镜像构建源码 | 运行时回指一次性 `第三方库` 目录 |
 | `compose.yaml` | 本机完整运行栈 | 存放生产凭据 |
 
 ## 3. 当前真实能力
@@ -33,6 +36,7 @@ RiskTrace 当前采用一个仓库、两个应用的轻量结构，不拆分微�
 - `/api/health/ready` 并行探测 PostgreSQL、Redis 和对象存储；任一失败即返回 HTTP 503 和明确降级状态。
 - Web 通过 `/api/platform-status` 服务端代理读取真实后端状态；连接失败时展示“后端不可用”，不回退到模拟状态。
 - 初始迁移建立 `raw_documents`、`events`、`entities`、`event_documents` 和 `evidence_links`，优先落地来源、租户与证据关系。
+- 第二个迁移启用本地构建的 pgvector 扩展；尚未创建 embedding 字段或索引。
 
 ## 4. 尚未实现
 
