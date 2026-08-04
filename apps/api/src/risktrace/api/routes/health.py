@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, Response, status
 from pydantic import BaseModel
@@ -27,6 +28,9 @@ def get_health_service(request: Request) -> InfrastructureHealthService:
     return request.app.state.health_service
 
 
+HealthService = Annotated[InfrastructureHealthService, Depends(get_health_service)]
+
+
 @router.get("/live", response_model=HealthResponse)
 async def liveness() -> HealthResponse:
     return HealthResponse(
@@ -40,7 +44,7 @@ async def liveness() -> HealthResponse:
 @router.get("/ready", response_model=HealthResponse)
 async def readiness(
     response: Response,
-    health_service: InfrastructureHealthService = Depends(get_health_service),
+    health_service: HealthService,
 ) -> HealthResponse:
     checks: dict[str, DependencyCheck] = await health_service.readiness()
     is_ready = all(check.status == "up" for check in checks.values())

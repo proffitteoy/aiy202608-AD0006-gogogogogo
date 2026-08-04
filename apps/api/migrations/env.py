@@ -6,8 +6,8 @@ from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from risktrace.core.config import get_settings
-from risktrace.db.base import Base
 from risktrace.db import models as models  # noqa: F401
+from risktrace.db.base import Base
 
 config = context.config
 if config.config_file_name is not None:

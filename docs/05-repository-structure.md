@@ -23,6 +23,7 @@ RiskTrace 当前采用一个仓库、两个应用的轻量结构，不拆分微�
 | `apps/api/src/risktrace/api` | HTTP 路由与输入输出契约 | 直接堆积业务规则或数据库细节 |
 | `apps/api/src/risktrace/core` | 配置和基础设施健康检查 | 承载金融语义判断 |
 | `apps/api/src/risktrace/db` | SQLAlchemy 元数据与持久化模型 | 绕过租户和审计边界 |
+| `apps/api/src/risktrace/events` | 事件准入、匹配、去重、指标与生命周期纯规则 | 发起网络调用、信任 LLM 直接裁决或隐藏缺失因子 |
 | `apps/api/migrations` | 可审查、可重放的数据库迁移 | 在应用启动时用 `create_all` 替代迁移 |
 | `apps/api/tests` | 后端边界和行为验证 | 依赖生产服务或外部付费接口 |
 | `apps/api/vendor` | 已提取的后端第三方实现与许可证 | 修改上游运行逻辑后不记录差异 |
@@ -37,12 +38,15 @@ RiskTrace 当前采用一个仓库、两个应用的轻量结构，不拆分微�
 - Web 通过 `/api/platform-status` 服务端代理读取真实后端状态；连接失败时展示“后端不可用”，不回退到模拟状态。
 - 初始迁移建立 `raw_documents`、`events`、`entities`、`event_documents` 和 `evidence_links`，优先落地来源、租户与证据关系。
 - 第二个迁移启用本地构建的 pgvector 扩展；尚未创建 embedding 字段或索引。
+- 第三个迁移新增事件聚类中心、准入记录、时间桶指标与平台基线；事件规则内核已可单元复算。
+- Sentence Transformers 适配器只在显式配置模型后惰性加载；仓库没有模型权重，当前应用启动不会隐式下载模型。
 
 ## 4. 尚未实现
 
 - 登录、RBAC 与真实租户上下文。
 - 历史事件数据导入、Adapter、checkpoint 和幂等流水线。
-- 事件聚类、状态机、确定性评分与实时推送。
+- 历史导入或实时消息到事件引擎的持久化调用路径，以及 Celery 指标调度。
+- 业务 API、页面与实时推送；当前纯规则模块并不等于端到端自动事件发现已运行。
 - 风险总览、事件工作台和证据检索业务页面。
 - LLM 语义候选、报告和人工审核闭环。
 

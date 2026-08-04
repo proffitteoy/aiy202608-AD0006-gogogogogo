@@ -8,14 +8,16 @@
 
 | 上游项目 | 提取目标 | 提取内容 | 必要改动 | 当前验证状态 |
 | --- | --- | --- | --- | --- |
-| `pgvector/pgvector` 0.8.6 | `infra/pgvector` | C 扩展源码、SQL、Makefile、控制文件、Dockerfile、许可证 | Dockerfile 从远程 `ADD` 改为构建本目录源码；Compose 构建本地镜像 | Compose 已接线；镜像尚未实际构建 |
+| `pgvector/pgvector` 0.8.6 | `infra/pgvector` | C 扩展源码、SQL、Makefile、控制文件、Dockerfile、许可证 | Dockerfile 从远程 `ADD` 改为构建本目录源码；Compose 构建本地镜像 | Compose 已接线；迁移已新增无固定维度的事件中心字段，镜像尚未实际构建 |
 | `celery/celery` 5.6.2 | `apps/api/vendor/celery` | `celery` Python 包、构建元数据、Redis extra 依赖定义、许可证 | 无实现改动 | 已由 `apps/api/uv.lock` 锁定为本地路径源 |
-| `huggingface/sentence-transformers` 5.7.0.dev0 | `apps/api/vendor/sentence-transformers` | `sentence_transformers` Python 包、模型卡模板、构建元数据、LICENSE/NOTICE | 无实现改动 | 已由 `apps/api/uv.lock` 锁定为本地路径源；未下载模型权重 |
+| `huggingface/sentence-transformers` 5.7.0.dev0 | `apps/api/vendor/sentence-transformers` | `sentence_transformers` Python 包、模型卡模板、构建元数据、LICENSE/NOTICE | 无上游实现改动；RiskTrace 新增惰性适配器 | 已由 `apps/api/uv.lock` 锁定为本地路径源；适配器会请求归一化 embedding，未下载模型权重 |
 | `pydantic/pydantic-ai` 源码快照 | `apps/api/vendor/pydantic-ai-slim`、`apps/api/vendor/pydantic-graph` | `pydantic_ai` 与其必需的 `pydantic_graph` 实现、许可证 | 仅把依赖于上游 Git 标签的动态版本元数据改成相同的 vendored 内部版本；未改运行实现 | 已由 `apps/api/uv.lock` 锁定为本地路径源；未接入模型提供商 |
 | `apache/echarts` 6.1.0 | `apps/web/vendor/echarts` | 完整 `src`、已生成的 `echarts.esm.min.mjs`、LICENSE/NOTICE | 新增只指向本地 ESM 产物的 vendor 包清单 | 已由 `package-lock.json` 锁定到本地路径；尚未接入页面 |
 | `xyflow/xyflow` 12.11.2 / system 0.0.79 | `apps/web/vendor/xyflow-react`、`apps/web/vendor/xyflow-system` | React Flow、XYFlow System 源码和原始 CSS、许可证 | 新增指向原始 TypeScript 源码的 vendor 包清单，并由 Next.js 转译 | 已由 `package-lock.json` 锁定到本地路径；本地快照不含 `dist`，尚未执行安装或构建验证 |
 
-后端依赖通过 `tool.uv.sources` 指向 `apps/api/vendor`，API Dockerfile 会在安装前复制 vendor 目录。PostgreSQL 镜像通过 `infra/pgvector` 本地构建，并由迁移 `20260804_0002` 启用 `vector` 扩展。
+后端依赖通过 `tool.uv.sources` 指向 `apps/api/vendor`，API Dockerfile 会在安装前复制 vendor 目录。
+PostgreSQL 镜像通过 `infra/pgvector` 本地构建，并由迁移 `20260804_0002` 启用 `vector`
+扩展；Python 侧使用锁定的 `pgvector` SQLAlchemy 绑定，`20260804_0003` 保存事件聚类中心。
 
 前端 `package.json` 和 `package-lock.json` 均指向 `apps/web/vendor`。锁文件已通过 JSON 解析与本地路径检查，但当前网络环境下依赖安装命令超时，因此没有执行 Next.js 构建；不能把“已锁定”描述为“已构建运行”。
 
@@ -39,4 +41,6 @@
 
 ## 尚未实现的业务能力
 
-组件源码落库不等于业务能力已经实现：当前仍没有 embedding 模型选择、向量字段、Celery 任务、LLM Agent、研究图表或传导图页面。实现这些能力时仍须遵守模型版本、证据 ID 校验、租户隔离和降级显示边界。
+组件源码落库不等于业务能力已经实现：当前已有 embedding 适配器和向量字段，但仍没有已选定/
+已下载的模型权重、Celery 任务、LLM Agent、研究图表或传导图页面。实现这些能力时仍须遵守
+模型版本、证据 ID 校验、租户隔离和降级显示边界。

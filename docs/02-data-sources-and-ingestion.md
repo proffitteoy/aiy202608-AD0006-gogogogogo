@@ -152,6 +152,9 @@ weighted_signal_i = semantic_score_i
 | documents_enriched | 语言、实体、重复组、质量标签 |
 | events | 事件主表与状态 |
 | event_documents | 事件—文档关联及权重 |
+| event_admission_records | 单条文档的准入因子、裁决、规则版本与匹配结果 |
+| event_metrics | 可复算时间桶、热度、动量、风险、完整度与输入文档集合 |
+| platform_baselines | 平台互动量经验分布与版本 |
 | entities | 行业、公司、商品、政策实体 |
 | market_bars | 行情时间序列 |
 | evidence_links | 结论—证据关系 |

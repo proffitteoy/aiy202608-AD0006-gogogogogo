@@ -13,6 +13,7 @@ __pycache__/
 htmlcov/
 .venv/
 apps/api/.venv/
+apps/api/vendor/*/build/
 .uv-cache/
 .uv-python/
 
