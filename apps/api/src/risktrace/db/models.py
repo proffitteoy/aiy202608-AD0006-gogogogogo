@@ -322,3 +322,83 @@ class EvidenceLink(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+class OpinionRecord(Base):
+    __tablename__ = "opinion_records"
+    __table_args__ = (
+        Index("ix_opinion_records_event_id", "event_id"),
+        Index("ix_opinion_records_document_id", "document_id"),
+        CheckConstraint(
+            "stance IN ('bullish', 'bearish', 'neutral', 'wait')",
+            name="ck_opinion_records_stance",
+        ),
+        CheckConstraint(
+            "claim_type IN ('fact', 'opinion', 'speculation')",
+            name="ck_opinion_records_claim_type",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    event_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("events.id", ondelete="CASCADE"), nullable=False
+    )
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("raw_documents.id", ondelete="RESTRICT"), nullable=False
+    )
+    target_entity_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True)
+    stance: Mapped[str] = mapped_column(String(16), nullable=False)
+    emotion: Mapped[str] = mapped_column(String(32), nullable=False)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    claim_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    evidence_span: Mapped[str] = mapped_column(Text, nullable=False)
+    model_confidence: Mapped[float] = mapped_column(nullable=False)
+    model_version: Mapped[str] = mapped_column(String(64), nullable=False, default="0.1.0")
+    prompt_version: Mapped[str] = mapped_column(String(64), nullable=False, default="v1")
+    input_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class TransmissionEdge(Base):
+    __tablename__ = "transmission_edges"
+    __table_args__ = (
+        Index("ix_transmission_edges_event_id", "event_id"),
+        CheckConstraint(
+            "direction IN ('positive', 'negative', 'uncertain')",
+            name="ck_transmission_edges_direction",
+        ),
+        CheckConstraint(
+            "horizon IN ('immediate', 'short', 'medium', 'long')",
+            name="ck_transmission_edges_horizon",
+        ),
+        CheckConstraint(
+            "status IN ('candidate', 'confirmed', 'rejected')",
+            name="ck_transmission_edges_status",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    event_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("events.id", ondelete="CASCADE"), nullable=False
+    )
+    from_node_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    from_node_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    to_node_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    to_node_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    mechanism: Mapped[str] = mapped_column(Text, nullable=False)
+    direction: Mapped[str] = mapped_column(String(16), nullable=False)
+    horizon: Mapped[str] = mapped_column(String(16), nullable=False)
+    evidence_ids: Mapped[list[uuid.UUID]] = mapped_column(JSON, default=list, nullable=False)
+    knowledge_ids: Mapped[list[uuid.UUID]] = mapped_column(JSON, default=list, nullable=False)
+    model_confidence: Mapped[float] = mapped_column(nullable=False)
+    status: Mapped[str] = mapped_column(String(16), default="candidate", nullable=False)
+    model_version: Mapped[str] = mapped_column(String(64), nullable=False, default="0.1.0")
+    prompt_version: Mapped[str] = mapped_column(String(64), nullable=False, default="v1")
+    input_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )

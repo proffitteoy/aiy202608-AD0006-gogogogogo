@@ -23,6 +23,13 @@ class Settings(BaseSettings):
     s3_secret_access_key: str = "risktrace-local-secret"
     s3_bucket: str = "risktrace"
     healthcheck_timeout_seconds: float = 2.0
+    llm_provider: str = "openai"
+    llm_model: str = "gpt-4o-mini"
+    llm_small_model: str = "gpt-4o-mini"
+    llm_api_key: str = ""
+    llm_base_url: str = ""
+    llm_temperature: float = 0.3
+    llm_max_tokens: int = 2048
 
     @property
     def cors_origin_list(self) -> list[str]:
