@@ -10,6 +10,8 @@
 - [02｜消息源与数据接入治理](02-data-sources-and-ingestion.md)
 - [03｜研究工作台与可视化交互](03-research-workbench.md)
 - [04｜Agent、规则与模型边界](04-agent-rule-boundary.md)
+- [05｜仓库结构与运行契约](05-repository-structure.md)
+- [06｜开源组件落库边界](06-third-party-components.md)
 
 | 关键决策：产品目标不是预测股价，而是把“突发事件发生后人工浏览海量信息”的研究流程压缩为可追溯的事件识别、观点归因、传导假设与风险优先级判断。 |
 | --- |

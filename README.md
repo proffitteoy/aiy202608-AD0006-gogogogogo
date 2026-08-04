@@ -4,19 +4,93 @@ RiskTrace 是面向证券研究员、资管研究团队和风险研究岗位的�
 
 ## 当前状态
 
-仓库当前为 **MVP Engineering Baseline（v0.1）设计文档仓库**，尚未包含可运行应用。
+仓库已经完成 MVP 工程结构初始化：
 
-- 已有：产品范围、平台架构、数据治理、研究工作台、Agent/规则边界和 MVP 验收标准。
-- 尚无：前后端源码、依赖清单、数据库迁移、`.env.example`、Docker Compose、测试和部署脚本。
-- 因此当前没有真实的安装、启动、构建、迁移或测试命令。后续引入首个可运行切片时，应把经验证的命令补充到本文件。
+- `apps/web`：Next.js / React / TypeScript 桌面 Web 入口。
+- `apps/api`：Python 3.13 / FastAPI 模块化后端、SQLAlchemy 核心模型与 Alembic 迁移。
+- `compose.yaml`：PostgreSQL、Redis、MinIO、API 和 Web 的本地完整编排。
+- 真实运行链路：Web 同源代理 → FastAPI 就绪接口 → PostgreSQL / Redis / MinIO 探测。
 
-## 产品边界
+当前页面不会展示伪事件数据。历史回放、事件聚类、研究工作台和 LLM 语义层仍待后续迭代。
 
-- 主产品是桌面 Web SaaS；移动端只承担告警和轻量查看。
-- MVP 不做自动交易、原生移动客户端、全网实时抓取或自由自治多 Agent 对话。
-- 规则负责确定性计算和触发，LLM 只生成结构化语义候选，研究员保留重大结论与外发内容的最终判断权。
-- 所有重要结论、指标和报告都必须能追溯到证据、计算版本或冻结快照。
-- 数据接入必须使用合规来源，不得绕过登录、验证码、反爬或访问控制。
+## 环境要求
+
+- Node.js 22 或更高版本
+- npm 10 或更高版本
+- uv（负责安装和管理 Python 3.13 环境）
+- Docker 与 Docker Compose
+
+## 快速启动完整本地栈
+
+```powershell
+Copy-Item .env.example .env
+docker compose up --build
+```
+
+启动后访问：
+
+- Web：<http://localhost:3000>
+- API 文档：<http://localhost:8000/api/docs>
+- API 存活检查：<http://localhost:8000/api/health/live>
+- API 就绪检查：<http://localhost:8000/api/health/ready>
+- MinIO 控制台：<http://localhost:9001>
+
+首次启动会构建镜像、创建基础设施卷、创建 `risktrace` 对象存储桶并执行数据库迁移。根 `.env.example` 中的凭据只适用于本机开发，生产环境必须替换。
+
+停止服务：
+
+```powershell
+npm run infra:down
+```
+
+如需同时删除本地数据库、缓存和对象存储卷，必须明确执行 `docker compose down -v`；该操作会删除本地运行数据，因此不包含在普通停止命令中。
+
+## 分进程开发
+
+安装并锁定前后端依赖：
+
+```powershell
+npm run bootstrap
+```
+
+启动基础设施并迁移数据库：
+
+```powershell
+npm run infra:up
+npm run migrate
+```
+
+随后在两个终端分别运行：
+
+```powershell
+npm run dev:api
+npm run dev:web
+```
+
+## 验证
+
+```powershell
+npm run check
+docker compose config --quiet
+```
+
+`npm run check` 会依次运行前端 ESLint、TypeScript 检查、生产构建、后端 Ruff 和 pytest。依赖就绪状态必须通过 `/api/health/ready` 验证；仅有 `/api/health/live` 成功不代表数据库、缓存和对象存储可用。
+
+## 目录结构
+
+```text
+RiskTrace/
+├── apps/
+│   ├── api/                  FastAPI、核心模型、迁移与测试
+│   └── web/                  Next.js 桌面 Web
+├── docs/                     产品与工程设计基线
+├── .env.example              本地配置示例
+├── compose.yaml              完整本地栈
+├── package.json              根命令入口
+└── AGENTS.md                 项目协作与安全边界
+```
+
+详细边界见 [仓库结构与运行契约](docs/05-repository-structure.md)。
 
 ## 设计文档
 
@@ -25,12 +99,9 @@ RiskTrace 是面向证券研究员、资管研究团队和风险研究岗位的�
 - [消息源、数据接入与治理](docs/02-data-sources-and-ingestion.md)：数据源、RawDocument、幂等接入和数据血缘。
 - [研究工作台与可视化交互](docs/03-research-workbench.md)：页面体系、证据下钻、人工操作和版本化。
 - [Agent、规则与模型边界](docs/04-agent-rule-boundary.md)：确定性规则、传统模型、LLM 和人工的职责。
-- [项目协作约定](AGENTS.md)：本仓库的实现、测试、文档与安全规则。
+- [开源组件落库边界](docs/06-third-party-components.md)：第三方参考项目的实际依赖、延期项与许可证边界。
+- [项目协作约定](AGENTS.md)：实现、测试、文档与安全规则。
 
-## 已确定的 MVP 技术方向
+## 下一实现切片
 
-设计文档建议使用 Next.js / React + TypeScript 构建前端，以 Python + FastAPI 模块化单体承载后端，配合 PostgreSQL、Redis、S3 兼容对象存储及 Docker Compose。以上是实现方向，不代表相关工程已经初始化或依赖版本已经确定。
-
-## 推荐首个实现切片
-
-首个可运行切片应围绕一条历史事件回放链路展开：统一 `RawDocument`、`Event`、`Entity` 和 `Evidence` 数据模型，实现幂等导入、去重、事件形成和热度时间线，再提供可从事件下钻到原始证据的最小 Web 页面。此阶段先不接入 LLM，避免在数据契约和证据链尚未成立前扩展语义层。
+下一步应围绕一条历史事件回放链路展开：实现 `RawDocument` 的 schema 校验与幂等导入、事件形成和热度时间线，再提供从事件下钻到原始证据的最小页面。此阶段仍不接入 LLM，避免在数据契约和证据链尚未成立前扩展语义层。

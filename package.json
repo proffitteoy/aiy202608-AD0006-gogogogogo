@@ -1,0 +1,25 @@
+{
+  "name": "risktrace",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "bootstrap": "npm run bootstrap:web && npm run bootstrap:api",
+    "bootstrap:web": "npm --prefix apps/web install",
+    "bootstrap:api": "uv sync --project apps/api",
+    "dev:web": "npm --prefix apps/web run dev",
+    "dev:api": "uv run --project apps/api uvicorn risktrace.main:app --reload --host 127.0.0.1 --port 8000",
+    "build:web": "npm --prefix apps/web run build",
+    "lint:web": "npm --prefix apps/web run lint",
+    "typecheck:web": "npm --prefix apps/web run typecheck",
+    "test:api": "uv run --project apps/api pytest",
+    "lint:api": "uv run --project apps/api ruff check src tests migrations",
+    "format:api": "uv run --project apps/api ruff format src tests migrations",
+    "migrate": "uv run --project apps/api alembic -c apps/api/alembic.ini upgrade head",
+    "infra:up": "docker compose up -d postgres redis minio minio-init",
+    "infra:down": "docker compose down",
+    "check": "npm run lint:web && npm run typecheck:web && npm run build:web && npm run lint:api && npm run test:api"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
