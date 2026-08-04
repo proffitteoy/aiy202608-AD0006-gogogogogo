@@ -8,15 +8,21 @@ from risktrace import __version__
 from risktrace.api.router import api_router
 from risktrace.core.config import get_settings
 from risktrace.core.health import InfrastructureHealthService
+from risktrace.db.session import create_db_engine, create_session_factory
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
+    engine = create_db_engine(settings.database_url)
+    session_factory = create_session_factory(engine)
+    app.state.db_engine = engine
+    app.state.db_session_factory = session_factory
     health_service = InfrastructureHealthService(settings)
     app.state.health_service = health_service
     yield
     await health_service.close()
+    await engine.dispose()
 
 
 def create_app() -> FastAPI:
