@@ -386,6 +386,15 @@
   font-size: 14px;
 }
 
+.edgePanelError {
+  display: block;
+  margin-top: var(--space-2);
+  color: var(--risk-high);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
+
 @media (max-width: 720px) {
   .edgePanel {
     right: var(--space-2);

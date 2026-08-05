@@ -56,6 +56,7 @@ export async function fetchEventTransmission(id: string): Promise<{
 }> {
   return apiFetch<{ items: BackendTransmissionEdge[]; total: number }>(
     `/api/events/${id}/transmission`,
+    { revalidateSec: 0 },
   );
 }
 
@@ -65,5 +66,6 @@ export async function fetchEventImpact(id: string): Promise<{
 }> {
   return apiFetch<{ items: BackendImpactMatrixRow[]; total: number }>(
     `/api/events/${id}/impact`,
+    { revalidateSec: 0 },
   );
 }

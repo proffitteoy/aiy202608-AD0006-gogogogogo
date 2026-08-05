@@ -16,6 +16,7 @@ import {
   type NodeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useEvidence } from "@/components/evidence/EvidenceContext";
@@ -172,13 +173,45 @@ function toEdges(edges: TransmissionEdge[], selectedId: string | null): Edge[] {
 function GraphInner({
   graph,
   wrapRef,
+  eventId,
 }: {
   graph: GraphType;
   wrapRef: React.RefObject<HTMLDivElement | null>;
+  eventId: string;
 }) {
+  const router = useRouter();
   const { open } = useEvidence();
   const { fitView } = useReactFlow();
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
+
+  const updateEdgeStatus = useCallback(
+    async (edgeId: string, next: "candidate" | "confirmed" | "rejected") => {
+      setUpdatingStatus(true);
+      setStatusError(null);
+      try {
+        const res = await fetch(
+          `/api/backend/events/${encodeURIComponent(eventId)}/transmission/${encodeURIComponent(edgeId)}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: next }),
+          },
+        );
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.detail || `HTTP ${res.status}`);
+        }
+        router.refresh();
+      } catch (err) {
+        setStatusError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setUpdatingStatus(false);
+      }
+    },
+    [eventId, router],
+  );
   const initialNodes = useMemo(() => layoutNodes(graph.nodes), [graph.nodes]);
   const rebuiltEdges = useMemo(
     () => toEdges(graph.edges, selectedEdgeId),
@@ -286,6 +319,44 @@ function GraphInner({
             </span>
           </div>
           <div className={styles.edgePanelActions}>
+            {selectedEdge.status.toLowerCase() === "candidate" ? (
+              <>
+                <button
+                  type="button"
+                  className={`${styles.edgeBtn} ${styles.edgeBtnConfirm}`}
+                  onClick={() => updateEdgeStatus(selectedEdge.id, "confirmed")}
+                  disabled={updatingStatus}
+                >
+                  采纳
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.edgeBtn} ${styles.edgeBtnReject}`}
+                  onClick={() => updateEdgeStatus(selectedEdge.id, "rejected")}
+                  disabled={updatingStatus}
+                >
+                  驳回
+                </button>
+              </>
+            ) : selectedEdge.status.toLowerCase() === "confirmed" ? (
+              <button
+                type="button"
+                className={styles.edgeBtn}
+                onClick={() => updateEdgeStatus(selectedEdge.id, "candidate")}
+                disabled={updatingStatus}
+              >
+                撤销采纳
+              </button>
+            ) : selectedEdge.status.toLowerCase() === "rejected" ? (
+              <button
+                type="button"
+                className={styles.edgeBtn}
+                onClick={() => updateEdgeStatus(selectedEdge.id, "candidate")}
+                disabled={updatingStatus}
+              >
+                撤销驳回
+              </button>
+            ) : null}
             <button
               type="button"
               className={styles.edgeBtn}
@@ -303,6 +374,9 @@ function GraphInner({
               ×
             </button>
           </div>
+          {statusError ? (
+            <span className={styles.edgePanelError}>{statusError}</span>
+          ) : null}
         </div>
       ) : null}
     </>
@@ -378,7 +452,7 @@ export function TransmissionGraph({ graph, status, eventId }: Props) {
   return (
     <div ref={wrapRef} className={styles.wrap}>
       <ReactFlowProvider>
-        <GraphInner graph={graph} wrapRef={wrapRef} />
+        <GraphInner graph={graph} wrapRef={wrapRef} eventId={eventId} />
       </ReactFlowProvider>
       <div className={styles.hint}>
         <span className={styles.hintDot} style={{ background: chartPalette.accent }} />

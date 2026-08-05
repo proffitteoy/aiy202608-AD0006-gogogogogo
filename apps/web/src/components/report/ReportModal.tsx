@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 
 import { useOpinionDecisions } from "@/hooks/use-opinion-decisions";
+import { ImpactMatrix } from "@/components/workbench/ImpactMatrix";
+import { TransmissionGraph } from "@/components/workbench/TransmissionGraph";
 import {
   formatDateTime,
   formatScore,
@@ -228,6 +230,18 @@ export function ReportModal({ detail, onClose }: Props) {
         {detail.graph.edges.length > 0 ? (
           <section>
             <h2 className={styles.h2}>五、传导假设</h2>
+            {detail.availability.transmission === "available" ? (
+              <div className={styles.chartFrame}>
+                <TransmissionGraph
+                  graph={detail.graph}
+                  status={detail.availability.transmission}
+                  eventId={detail.id}
+                />
+              </div>
+            ) : null}
+            <p className={styles.chartFrameCaption}>
+              下表为传导假设的结构化明细，与上图一一对应。
+            </p>
             <table className={styles.table}>
               <thead>
                 <tr>
@@ -266,8 +280,20 @@ export function ReportModal({ detail, onClose }: Props) {
           </section>
         ) : null}
 
+        {detail.impactMatrix.length > 0 ? (
+          <section>
+            <h2 className={styles.h2}>六、影响热力矩阵</h2>
+            <div className={styles.chartFrame}>
+              <ImpactMatrix
+                rows={detail.impactMatrix}
+                status={detail.availability.impact}
+              />
+            </div>
+          </section>
+        ) : null}
+
         <section>
-          <h2 className={styles.h2}>六、证据附录</h2>
+          <h2 className={styles.h2}>七、证据附录</h2>
           {(Object.entries(groupedEvidence) as [string, typeof detail.evidence][]).map(
             ([tier, items]) =>
               items.length > 0 ? (

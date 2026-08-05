@@ -380,6 +380,27 @@
   letter-spacing: 0.06em;
 }
 
+/* --- 报告内嵌图表容器（传导图 / 热力矩阵） --- */
+.chartFrame {
+  position: relative;
+  height: 480px;
+  margin: var(--space-3) 0 var(--space-4);
+  padding: var(--space-3);
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  break-inside: avoid-page;
+}
+
+.chartFrameCaption {
+  margin: calc(-1 * var(--space-2)) 0 var(--space-3);
+  color: var(--text-tertiary);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 /* --- 传导假设表 --- */
 .table {
   width: 100%;
@@ -550,5 +571,11 @@
     background: #fff;
     box-shadow: none;
     animation: none;
+  }
+  /* 打印时保留图表容器高度，避免 SVG/canvas 被压扁 */
+  .chartFrame {
+    height: 440px;
+    background: #fff;
+    border-color: #d0d0d0;
   }
 }

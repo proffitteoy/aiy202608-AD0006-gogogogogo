@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-height: 260px;
+  min-height: 320px;
   gap: var(--space-3);
 }
 
@@ -31,82 +31,182 @@
 
 .header {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
 }
 
-.note {
+.note,
+.meta {
   color: var(--text-tertiary);
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.05em;
+}
+
+.note {
   text-transform: uppercase;
 }
 
-.chart {
+.legend {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.legendItem {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--text-tertiary);
+}
+
+.legendItem[data-tone="positive"] .legendDot {
+  background: var(--risk-low);
+}
+
+.legendItem[data-tone="negative"] .legendDot {
+  background: var(--risk-high);
+}
+
+.tableScroll {
   flex: 1;
   min-height: 0;
+  overflow: auto;
 }
 
-.summary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-2);
-}
-
-.summaryItem {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 2px var(--space-3);
-  align-items: center;
+.table {
   width: 100%;
-  padding: var(--space-2) var(--space-3);
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+  font-size: var(--text-body-s);
+}
+
+.corner,
+.metricHead {
+  padding: 10px 12px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-align: right;
+  text-transform: uppercase;
+  vertical-align: bottom;
+  background: transparent;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.corner {
+  width: 128px;
+  min-width: 96px;
+}
+
+.entityHead {
+  padding: 0;
+  vertical-align: middle;
   text-align: left;
-  background: var(--surface-2);
-  border: 1px solid var(--border-subtle);
-  border-radius: 4px;
-  transition:
-    border-color var(--dur-fast),
-    background var(--dur-fast),
-    color var(--dur-fast);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
-.summaryItem:hover:not(:disabled) {
-  background: var(--surface-3);
-  border-color: var(--border-strong);
+.entityBtn {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  width: 100%;
+  padding: 12px 12px 12px 4px;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-body-s);
+  font-weight: 500;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: color var(--dur-fast);
 }
 
-.summaryItem:disabled {
-  opacity: 0.6;
+.entityBtn:hover:not(:disabled) {
+  color: var(--accent);
+}
+
+.entityBtn:disabled {
+  color: var(--text-tertiary);
   cursor: not-allowed;
 }
 
-.summaryName {
-  min-width: 0;
+.entityName {
+  max-width: 12em;
   overflow: hidden;
-  color: var(--text-primary);
-  font-size: var(--text-body-s);
-  font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.summaryMeta {
-  grid-column: 1 / 2;
+.entityMeta {
   color: var(--text-tertiary);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
 }
 
-.summaryScore {
-  grid-column: 2 / 3;
-  grid-row: 1 / span 2;
+.cell {
+  position: relative;
+  padding: 14px 12px 18px;
+  vertical-align: middle;
+  text-align: right;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background var(--dur-fast);
+}
+
+.cell:hover {
+  background: color-mix(in oklch, var(--surface-2) 55%, transparent);
+}
+
+.value {
+  display: block;
   color: var(--text-primary);
   font-family: var(--font-mono);
-  font-size: var(--text-body-s);
+  font-size: var(--text-body-m);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1;
 }
 
-@media (max-width: 720px) {
-  .summary {
-    grid-template-columns: 1fr;
-  }
+.bar {
+  position: absolute;
+  right: 12px;
+  bottom: 8px;
+  height: 2px;
+  max-width: calc(100% - 24px);
+  background: var(--text-tertiary);
+  opacity: 0.5;
+  transition: width var(--dur-fast), background var(--dur-fast);
+}
+
+/* --- 方向着色：主体行 direction 驱动数值/条颜色 --- */
+tr[data-direction="positive"] .value {
+  color: var(--risk-low);
+}
+tr[data-direction="positive"] .bar {
+  background: var(--risk-low);
+  opacity: 0.85;
+}
+
+tr[data-direction="negative"] .value {
+  color: var(--risk-high);
+}
+tr[data-direction="negative"] .bar {
+  background: var(--risk-high);
+  opacity: 0.85;
 }

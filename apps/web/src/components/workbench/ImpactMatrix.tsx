@@ -1,10 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
-
 import { useEvidence } from "@/components/evidence/EvidenceContext";
-import { useResize } from "@/hooks/use-resize";
-import { baseChartOption, chartPalette } from "@/lib/chart-theme";
 import { formatScore } from "@/lib/format";
 import type { Availability, ImpactMatrixRow } from "@/lib/types";
 
@@ -24,12 +20,6 @@ const metricRows = [
 ] as const;
 
 type MetricId = (typeof metricRows)[number]["id"];
-
-type HeatCell = {
-  value: [number, number, number];
-  row: ImpactMatrixRow;
-  metricId: MetricId;
-};
 
 const directionLabels: Record<string, string> = {
   positive: "受益",
@@ -76,160 +66,86 @@ export function ImpactMatrix({ rows, status }: Props) {
     );
   }
 
-  return <ImpactMatrixChart rows={rows} />;
+  return <ImpactMatrixTable rows={rows} />;
 }
 
-function ImpactMatrixChart({ rows }: { rows: ImpactMatrixRow[] }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<{ resize: () => void; dispose: () => void } | null>(null);
+function ImpactMatrixTable({ rows }: { rows: ImpactMatrixRow[] }) {
   const { open } = useEvidence();
-
-  const onResize = useCallback(() => chartRef.current?.resize(), []);
-  useResize(containerRef, onResize);
-
-  useEffect(() => {
-    let disposed = false;
-    let handleResize: (() => void) | undefined;
-
-    void (async () => {
-      const echarts = await import("echarts");
-      if (disposed || !containerRef.current) return;
-
-      const chart = echarts.init(containerRef.current, undefined, {
-        renderer: "canvas",
-      });
-      chartRef.current = chart;
-
-      const entities = rows.map((row) => row.entityName);
-      const data: HeatCell[] = rows.flatMap((row, columnIndex) =>
-        metricRows.map((metric, rowIndex) => ({
-          value: [columnIndex, rowIndex, metricValue(row, metric.id)],
-          row,
-          metricId: metric.id,
-        })),
-      );
-
-      chart.setOption({
-        ...baseChartOption,
-        grid: { ...baseChartOption.grid, top: 56, right: 20, bottom: 84, left: 92 },
-        tooltip: {
-          ...baseChartOption.tooltip,
-          formatter: (params: unknown) => {
-            const datum = (params as { data?: HeatCell }).data;
-            if (!datum) return "";
-            const metric = metricRows.find((item) => item.id === datum.metricId);
-            const row = datum.row;
-            return [
-              `<strong>${row.entityName}</strong>`,
-              `${metric?.label ?? datum.metricId}: ${formatScore(datum.value[2])}`,
-              `${directionLabels[row.direction] ?? row.direction} / ${horizonLabels[row.timeHorizon] ?? row.timeHorizon}`,
-              `边 ${row.edgeCount} / 观点 ${row.opinionCount} / 证据 ${row.evidenceCount}`,
-            ].join("<br/>");
-          },
-        },
-        xAxis: {
-          ...baseChartOption.xAxis,
-          type: "category",
-          data: entities,
-          axisLabel: {
-            ...baseChartOption.xAxis.axisLabel,
-            interval: 0,
-            rotate: entities.length > 4 ? 28 : 0,
-          },
-        },
-        yAxis: {
-          ...baseChartOption.yAxis,
-          type: "category",
-          data: metricRows.map((metric) => metric.label),
-        },
-        visualMap: {
-          min: 0,
-          max: 1,
-          calculable: false,
-          orient: "horizontal",
-          left: "center",
-          bottom: 8,
-          text: ["高", "低"],
-          textStyle: {
-            color: chartPalette.textTertiary,
-            fontFamily: baseChartOption.textStyle.fontFamily,
-            fontSize: 12,
-          },
-          inRange: {
-            color: [
-              chartPalette.divergingNeutral,
-              chartPalette.divergingPalePos,
-              chartPalette.divergingPositive,
-            ],
-          },
-        },
-        series: [
-          {
-            type: "heatmap",
-            data,
-            label: {
-              show: true,
-              fontSize: 11,
-              color: chartPalette.textPrimary,
-              formatter: (params: unknown) => {
-                const datum = (params as { data?: HeatCell }).data;
-                return datum ? formatScore(datum.value[2], 0) : "";
-              },
-            },
-            emphasis: {
-              itemStyle: {
-                borderColor: chartPalette.textPrimary,
-                borderWidth: 1,
-              },
-            },
-          },
-        ],
-      });
-
-      chart.on("click", (params: unknown) => {
-        const datum = (params as { data?: HeatCell }).data;
-        if (datum?.row.evidenceIds.length) {
-          open(datum.row.evidenceIds);
-        }
-      });
-
-      handleResize = () => chart.resize();
-      window.addEventListener("resize", handleResize);
-    })();
-
-    return () => {
-      disposed = true;
-      if (handleResize) window.removeEventListener("resize", handleResize);
-      chartRef.current?.dispose();
-      chartRef.current = null;
-    };
-  }, [open, rows]);
 
   return (
     <div className={styles.wrap}>
       <div className={styles.header}>
-        <span className={styles.note}>点击单元格可打开对象关联证据</span>
+        <span className={styles.note}>点击行首主体可打开对象关联证据</span>
+        <div className={styles.legend} aria-label="方向颜色图例">
+          <span className={styles.legendItem} data-tone="positive">
+            <span className={styles.legendDot} aria-hidden="true" />受益
+          </span>
+          <span className={styles.legendItem} data-tone="negative">
+            <span className={styles.legendDot} aria-hidden="true" />受损
+          </span>
+          <span className={styles.legendItem} data-tone="neutral">
+            <span className={styles.legendDot} aria-hidden="true" />不确定
+          </span>
+        </div>
+        <span className={styles.meta} data-numeric>
+          {rows.length} 主体 × {metricRows.length} 维
+        </span>
       </div>
-      <div ref={containerRef} className={styles.chart} />
-      <div className={styles.summary}>
-        {rows.slice(0, 4).map((row) => (
-          <button
-            key={row.entityId}
-            type="button"
-            className={styles.summaryItem}
-            onClick={() => open(row.evidenceIds)}
-            disabled={row.evidenceIds.length === 0}
-          >
-            <span className={styles.summaryName}>{row.entityName}</span>
-            <span className={styles.summaryMeta}>
-              {directionLabels[row.direction] ?? row.direction} /{" "}
-              {horizonLabels[row.timeHorizon] ?? row.timeHorizon}
-            </span>
-            <span className={styles.summaryScore} data-numeric>
-              {formatScore(row.compositeConfidence)}
-            </span>
-          </button>
-        ))}
+      <div className={styles.tableScroll}>
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th scope="col" className={styles.corner} />
+              {metricRows.map((metric) => (
+                <th key={metric.id} scope="col" className={styles.metricHead}>
+                  {metric.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => {
+              const dirLabel = directionLabels[row.direction] ?? row.direction;
+              const horizonLabel =
+                horizonLabels[row.timeHorizon] ?? row.timeHorizon;
+              const evidenceEmpty = row.evidenceIds.length === 0;
+              return (
+                <tr key={row.entityId} data-direction={row.direction}>
+                  <th scope="row" className={styles.entityHead}>
+                    <button
+                      type="button"
+                      className={styles.entityBtn}
+                      onClick={() => open(row.evidenceIds)}
+                      disabled={evidenceEmpty}
+                      title={`${dirLabel} · ${horizonLabel} · 边 ${row.edgeCount} / 观点 ${row.opinionCount} / 证据 ${row.evidenceCount}`}
+                    >
+                      <span className={styles.entityName}>{row.entityName}</span>
+                      <span className={styles.entityMeta}>
+                        {dirLabel} · {horizonLabel}
+                      </span>
+                    </button>
+                  </th>
+                  {metricRows.map((metric) => {
+                    const v = metricValue(row, metric.id);
+                    const width = Math.max(0, Math.min(1, v)) * 100;
+                    return (
+                      <td key={metric.id} className={styles.cell}>
+                        <span className={styles.value} data-numeric>
+                          {formatScore(v, 0)}
+                        </span>
+                        <span
+                          className={styles.bar}
+                          aria-hidden="true"
+                          style={{ width: `${width}%` }}
+                        />
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );

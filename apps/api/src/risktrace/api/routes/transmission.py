@@ -1,7 +1,8 @@
 import uuid
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -159,3 +160,56 @@ async def generate_transmission(
         "event_id": str(event_id),
         "edge_count": len(edges),
     }
+
+
+class TransmissionEdgeStatusUpdate(BaseModel):
+    status: Literal["candidate", "confirmed", "rejected"]
+
+
+@router.patch(
+    "/{event_id}/transmission/{edge_id}",
+    response_model=TransmissionEdgeItem,
+)
+async def update_transmission_edge(
+    event_id: uuid.UUID,
+    edge_id: uuid.UUID,
+    payload: TransmissionEdgeStatusUpdate,
+    tenant_id: DemoTenantId,
+    db: DbSession,
+) -> TransmissionEdgeItem:
+    event = await db.scalar(
+        select(Event).where(Event.id == event_id, Event.tenant_id == tenant_id)
+    )
+    if event is None:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    edge = await db.scalar(
+        select(TransmissionEdge).where(
+            TransmissionEdge.id == edge_id,
+            TransmissionEdge.event_id == event_id,
+            TransmissionEdge.tenant_id == tenant_id,
+        )
+    )
+    if edge is None:
+        raise HTTPException(status_code=404, detail="Transmission edge not found")
+
+    edge.status = payload.status
+    await db.commit()
+    await db.refresh(edge)
+
+    node_ids = {edge.from_node_id, edge.to_node_id}
+    entity_rows = await db.execute(
+        select(Entity).where(
+            Entity.id.in_(node_ids),
+            Entity.tenant_id == tenant_id,
+        )
+    )
+    labels = {entity.id: entity.name for entity in entity_rows.scalars()}
+    labels[event.id] = event.title
+
+    return TransmissionEdgeItem.model_validate(edge).model_copy(
+        update={
+            "from_node_label": labels.get(edge.from_node_id),
+            "to_node_label": labels.get(edge.to_node_id),
+        }
+    )
