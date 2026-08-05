@@ -108,6 +108,7 @@ export default async function EventWorkbenchPage({
               <TransmissionGraph
                 graph={detail.graph}
                 status={detail.availability.transmission}
+                eventId={detail.id}
               />
             </WorkbenchPanel>
           }

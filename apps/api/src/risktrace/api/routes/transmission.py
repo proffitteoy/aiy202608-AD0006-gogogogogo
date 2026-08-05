@@ -18,6 +18,19 @@ DemoTenantId = Annotated[uuid.UUID, Depends(get_demo_tenant_id)]
 DbSession = Annotated[AsyncSession, Depends(get_db)]
 
 
+def _build_agent(session: AsyncSession):
+    from risktrace.agents.transmission import TransmissionGraphAgent
+    from risktrace.core.config import get_settings
+
+    settings = get_settings()
+    if not settings.llm_api_key:
+        raise HTTPException(
+            status_code=503,
+            detail="LLM API key not configured. Set RISKTRACE_LLM_API_KEY in .env",
+        )
+    return TransmissionGraphAgent(session)
+
+
 @router.get("/{event_id}/transmission", response_model=TransmissionListResponse)
 async def list_transmission(
     event_id: uuid.UUID,
@@ -72,3 +85,33 @@ async def list_transmission(
         ],
         total=total,
     )
+
+
+@router.post("/{event_id}/transmission/generate", status_code=202)
+async def generate_transmission(
+    event_id: uuid.UUID,
+    tenant_id: DemoTenantId,
+    db: DbSession,
+) -> dict[str, object]:
+    event = await db.scalar(
+        select(Event).where(Event.id == event_id, Event.tenant_id == tenant_id)
+    )
+    if event is None:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    agent = _build_agent(db)
+    try:
+        edges = await agent.generate_for_event(event_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Transmission generation failed: {exc}",
+        ) from exc
+
+    return {
+        "status": "generated" if edges else "skipped",
+        "event_id": str(event_id),
+        "edge_count": len(edges),
+    }

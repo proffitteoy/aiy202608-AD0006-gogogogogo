@@ -35,6 +35,7 @@ import styles from "./TransmissionGraph.module.css";
 type Props = {
   graph: GraphType;
   status: Availability;
+  eventId: string;
 };
 
 const nodeTypeLabel: Record<TransmissionNodeType, string> = {
@@ -290,13 +291,47 @@ function GraphInner({
   );
 }
 
-export function TransmissionGraph({ graph, status }: Props) {
+export function TransmissionGraph({ graph, status, eventId }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
+  const [generating, setGenerating] = useState(false);
+  const [genError, setGenError] = useState<string | null>(null);
+
+  const handleGenerate = useCallback(async () => {
+    setGenerating(true);
+    setGenError(null);
+    try {
+      const res = await fetch(
+        `/api/backend/events/${encodeURIComponent(eventId)}/transmission/generate`,
+        { method: "POST" },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail || `HTTP ${res.status}`);
+      }
+      window.location.reload();
+    } catch (err) {
+      setGenError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setGenerating(false);
+    }
+  }, [eventId]);
+
   if (status !== "available" || graph.edges.length === 0) {
     return (
       <div className={styles.empty} role="status">
         <strong>{status === "degraded" ? "传导接口不可用" : "传导假设尚未生成"}</strong>
         <span>Agent 2 Analyze 没有可验证的传导候选。</span>
+        {status !== "degraded" && (
+          <button
+            type="button"
+            className={styles.generateBtn}
+            onClick={handleGenerate}
+            disabled={generating}
+          >
+            {generating ? "生成中..." : "生成传导假设"}
+          </button>
+        )}
+        {genError && <span className={styles.genError}>{genError}</span>}
       </div>
     );
   }

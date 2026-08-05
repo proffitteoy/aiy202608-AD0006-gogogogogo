@@ -178,6 +178,30 @@
   border-radius: 1px;
 }
 
+.generateBtn {
+  margin-top: 12px;
+  padding: 6px 16px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 150ms;
+}
+
+.generateBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.genError {
+  margin-top: 8px;
+  color: var(--risk-high, #ef4444);
+  font-size: 0.75rem;
+}
+
 .hintDotDashed {
   height: 0;
   background: transparent !important;
