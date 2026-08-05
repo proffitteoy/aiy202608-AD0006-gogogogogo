@@ -13,14 +13,19 @@ FastAPI 模块化后端。当前实现提供存活/就绪检查、基础设施�
 - 事实/新闻/社交分层的 `confirmation-v2`，传播速度不参与事实确认；
 - `candidate → confirmed → active → cooling → closed` 生命周期规则。
 
-Sentence Transformers 通过惰性适配器接入；必须显式提供本地模型路径或可取得的模型名。
+Sentence Transformers 通过可选的惰性适配器接入；默认 API 安装不包含其 PyTorch/Transformers
+依赖，启用前需执行 `npm run bootstrap:api:embeddings`，并显式提供本地模型路径或可取得的模型名。
 仓库不附带模型权重。pgvector 用于保存事件中心和按租户检索候选事件。当前已有固定 seed
 导入和服务端固定 Demo tenant 的只读业务 API。`POST /api/v1/ingestion/items` 已提供
 Bearer 服务账户写入：服务端决定 tenant 和 provider scope，按来源 ID 幂等保存 `RawDocument`，
-每次投递追加 `IngestionReceipt`。接入响应固定为 `pending_enrichment`；自动采集 Adapter、
-事件引擎/Rule 3/4 持久化编排、Celery 调度和前端工作台仍未接线。Agent 1/2 也尚未实现。
+每次投递追加 `IngestionReceipt`。首次写入会同步尽力执行确定性 Rule 1/2、Event、Metric 和
+Rule 3/4 持久化；该阶段失败会回滚并记录日志，但接入记录仍保留。响应目前固定为
+`pending_enrichment`，尚无处理状态查询、可靠重试或后台调度。Agent 1/2 也尚未实现。
 
-Celery、Sentence Transformers、Pydantic AI Slim 与 Pydantic Graph 的上游实现保存在 `vendor/`，`uv.lock` 使用本地路径源；安装和容器构建不依赖根目录的 `第三方库`。
+Sentence Transformers 的上游实现保存在 `vendor/`，`uv.lock` 使用本地可选路径源；默认安装和
+容器构建不会安装该可选依赖。当前没有 Celery worker 或 Agent 1/2 运行调用链，因此 Celery、
+Pydantic AI Slim 与 Pydantic Graph 未保留在依赖或 vendor 目录中。安装和容器构建不依赖根目录的
+`第三方库`。
 
 从仓库根目录运行：
 

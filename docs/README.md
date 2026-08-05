@@ -2,7 +2,7 @@
 
 基于多模型/Agent 协同的“金融事件—社交情绪—市场传导”实时研究工作台
 
-文档版本：v0.1  |  日期：2026-08-04  |  状态：MVP Engineering Baseline
+文档版本：v0.2  |  日期：2026-08-05  |  状态：MVP Engineering Baseline
 
 ## 文档导航
 
@@ -13,11 +13,15 @@
 - [05｜仓库结构与运行契约](05-repository-structure.md)
 - [06｜开源组件落库边界](06-third-party-components.md)
 - [07｜当前状态评估与纵向交付计划](07-current-state-and-delivery-plan.md)
+- [第三方软件与许可证](../THIRD_PARTY_NOTICES.md)
 - [自动事件聚类与热点计算设计](自动事件聚类热点计算设计.md)
 - [Rule 4 后验评分校准设计](Rule4后验评分校准设计.md)
 
 | 关键决策：产品目标不是预测股价，而是把“突发事件发生后人工浏览海量信息”的研究流程压缩为可追溯的事件识别、观点归因、传导假设与风险优先级判断。 |
 | --- |
+
+> 本文定义目标产品和验收边界，不代表所有能力已经交付。当前代码实现、运行验证与剩余风险以
+> [当前状态评估](07-current-state-and-delivery-plan.md) 为准；根 [README](../README.md) 只保留操作者需要的快速入口。
 
 ## 1. 产品定义
 
@@ -179,17 +183,19 @@ Agent 只能解释冻结的 Rule 3/4 结果，不能提出或写入任何覆盖 
 
 ## 13. 关键 API
 
-| 接口 | 用途 |
-| --- | --- |
-| POST /api/v1/ingestion/items | 服务账户提交严格 SourceRecord，幂等写入原始文档并返回接收回执 |
-| GET /api/events | 风险总览事件列表 |
-| GET /api/events/{id}/workspace | 事件工作台聚合数据 |
-| GET /api/events/{id}/evidence | 证据筛选 |
-| POST /api/events/{id}/review | 人工确认/拒绝/备注 |
-| POST /api/events/{id}/reanalyze | 创建新分析版本 |
-| GET /api/entities/{id}/exposure | 实体风险暴露 |
-| POST /api/alerts/rules | 配置告警规则 |
-| POST /api/reports | 基于 snapshot 生成报告 |
+| 接口 | 用途 | 当前状态 |
+| --- | --- | --- |
+| POST /api/v1/ingestion/items | 服务账户提交严格 SourceRecord，幂等写入原始文档并返回接收回执 | 已实现；确定性处理为同步尽力执行，完成状态尚不可查询 |
+| GET /api/events | 风险总览事件列表 | 已实现 |
+| GET /api/events/{id}/workspace | 事件工作台聚合数据 | 已实现 |
+| GET /api/events/{id}/evidence | 证据筛选 | 已实现 |
+| GET /api/events/{id}/opinions | 观点归因只读查询 | 已实现 |
+| GET /api/events/{id}/transmission | 传导候选只读查询 | 已实现 |
+| POST /api/events/{id}/review | 人工确认/拒绝/备注 | 仅设计，未实现 |
+| POST /api/events/{id}/reanalyze | 创建新分析版本 | 仅设计，未实现 |
+| GET /api/entities/{id}/exposure | 实体风险暴露 | 仅设计，未实现 |
+| POST /api/alerts/rules | 配置告警规则 | 仅设计，未实现 |
+| POST /api/reports | 基于 snapshot 生成报告 | 仅设计，未实现 |
 
 ## 14. 数据与模型可追溯要求
 

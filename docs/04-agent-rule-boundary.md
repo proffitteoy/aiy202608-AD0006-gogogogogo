@@ -2,7 +2,7 @@
 
 定义确定性规则、传统模型、LLM Agent 与人工研究员的责任边界
 
-文档版本：v0.1  |  日期：2026-08-04  |  状态：MVP Engineering Baseline
+文档版本：v0.2  |  日期：2026-08-05  |  状态：MVP Engineering Baseline
 
 | 关键决策：规则决定系统何时触发、如何计算和如何审计；传统模型负责高频可训练任务；LLM 负责语义理解和候选假设；研究员保留重大结论与投资含义的最终判断权。 |
 | --- |
@@ -293,7 +293,9 @@ Rule 4 直接校准 `raw_score`，没有 Agent 调分入口。第五个迁移保
 只进入 Heat/Momentum，不再用于证明事实成立。缺失互动基线、行情或平台覆盖时，对应因子保持
 `null` 或显式 degraded，不能以 0 冒充已观测数据。
 
-当前已有固定场景导入器和只读事件/证据 API，且查询由服务端固定 Demo tenant 过滤；但历史导入
-到事件引擎、Rule 3/4 持久化和后台调度仍未接线。旧的 Opinion/Transmission 独立 Agent 执行入口
-已移除，只保留结构化对象和只读查询。Agent 1、Agent 2、Evidence Mapper、AnalysisSnapshot、
-报告生成和前端工作台仍未实现，因此不能声称完整自动事件发现、自动评分或 Agent 闭环已运行。
+当前已有固定场景导入器、统一接入和只读事件/证据 API，且查询由服务端固定 Demo tenant 过滤。
+首次统一接入会同步尽力执行确定性流水线，写入 Rule 1/2 准入、Event/Evidence 关联、EventMetric 和
+Rule 3/4 校准记录；但该数据库调用路径尚未完成真实回放验收，也没有可靠处理状态、重试或后台调度。
+旧的 Opinion/Transmission 独立 Agent 执行入口已移除，只保留结构化对象、只读查询和前端展示。
+Agent 1、Agent 2、Evidence Mapper、AnalysisSnapshot 与报告生成仍未实现，因此不能声称 Agent
+闭环或完整 MVP 已运行。

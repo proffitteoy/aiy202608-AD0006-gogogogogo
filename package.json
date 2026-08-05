@@ -6,6 +6,7 @@
     "bootstrap": "npm run bootstrap:web && npm run bootstrap:api",
     "bootstrap:web": "npm --prefix apps/web install",
     "bootstrap:api": "uv --cache-dir .uv-cache sync --project apps/api",
+    "bootstrap:api:embeddings": "uv --cache-dir .uv-cache sync --project apps/api --extra embeddings",
     "dev:web": "npm --prefix apps/web run dev",
     "dev:api": "uv --cache-dir .uv-cache run --no-sync --project apps/api uvicorn risktrace.main:app --reload --host 127.0.0.1 --port 8000",
     "build:web": "npm --prefix apps/web run build",

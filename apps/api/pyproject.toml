@@ -8,16 +8,17 @@ dependencies = [
   "alembic>=1.16,<2",
   "asyncpg>=0.30,<1",
   "boto3>=1.40,<2",
-  "celery[redis]==5.6.2",
   "fastapi>=0.116,<1",
   "pgvector>=0.4,<1",
-  "pydantic-ai-slim==0.0.0+vendored.20260804",
-  "pydantic-graph==0.0.0+vendored.20260804",
   "pydantic-settings>=2.10,<3",
   "redis>=6.4,<7",
-  "sentence-transformers==5.7.0.dev0",
   "sqlalchemy[asyncio]>=2.0.43,<3",
   "uvicorn[standard]>=0.35,<1",
+]
+
+[project.optional-dependencies]
+embeddings = [
+  "sentence-transformers==5.7.0.dev0",
 ]
 
 [dependency-groups]
@@ -48,7 +49,4 @@ target-version = "py313"
 select = ["E", "F", "I", "UP", "B", "SIM", "ASYNC"]
 
 [tool.uv.sources]
-celery = { path = "vendor/celery" }
-pydantic-ai-slim = { path = "vendor/pydantic-ai-slim" }
-pydantic-graph = { path = "vendor/pydantic-graph" }
 sentence-transformers = { path = "vendor/sentence-transformers" }
