@@ -45,6 +45,7 @@ class IngestionService:
         collected_at = record.collected_at or received_at
         source_metadata = dict(record.metadata)
         source_metadata["_risktrace_ingestion"] = {
+            "collected_at_supplied": record.collected_at is not None,
             "engagement_available": record.engagement is not None,
             "stream": record.source.stream,
         }

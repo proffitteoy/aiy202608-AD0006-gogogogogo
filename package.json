@@ -16,11 +16,12 @@
     "format:api": "uv run --project apps/api ruff format src tests migrations",
     "demo:list": "uv run --project demo python demo/src/risktrace_demo_cli.py list",
     "demo:convert": "uv run --project demo python demo/src/risktrace_demo_cli.py convert",
+    "lint:demo": "uv run --project apps/api ruff check demo/src demo/tests --config apps/api/pyproject.toml",
     "test:demo": "uv run --project demo python -m unittest discover -s demo/tests",
     "migrate": "uv run --project apps/api alembic -c apps/api/alembic.ini upgrade head",
     "infra:up": "docker compose up -d postgres redis minio minio-init",
     "infra:down": "docker compose down",
-    "check": "npm run lint:web && npm run typecheck:web && npm run build:web && npm run lint:api && npm run test:api && npm run test:demo"
+    "check": "npm run lint:web && npm run typecheck:web && npm run build:web && npm run lint:api && npm run lint:demo && npm run test:api && npm run test:demo"
   },
   "engines": {
     "node": ">=22"

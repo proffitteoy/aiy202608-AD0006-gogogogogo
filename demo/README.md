@@ -13,7 +13,7 @@
 | 不合格记录隔离 | 已实现 | 写入 `rejected.jsonl`，不静默补造发布时间 |
 | 固定间隔回放 | 已实现 | 支持 start/pause/resume/stop/reset/seek/set_speed |
 | checkpoint | 已实现 | 成功投递后才推进 cursor；运行状态写入根 `runtime/demo/` |
-| HTTP 投递 | 已实现 | URL 可配置，409 作为幂等成功，失败后进入 `DEGRADED` |
+| HTTP 投递 | 已实现 | URL 可配置；2xx 的 `outcome=duplicate` 为幂等成功，409 内容冲突会停止回放 |
 | 统一 ingestion API | 等待后端接线 | 当前仓库尚无 `/api/v1/ingestion/items` 实际路由 |
 | 事件/评分/Agent | 不在本目录实现 | 必须复用后端统一流水线 |
 

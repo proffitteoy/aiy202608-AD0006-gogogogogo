@@ -138,7 +138,7 @@ npm run check
 docker compose config --quiet
 ```
 
-`npm run check` 依次执行前端 ESLint、TypeScript 检查、生产构建、后端 Ruff 和 pytest，以及 Demo 回放单元测试。`/api/health/live` 只表示 API 进程存活；数据库、缓存和对象存储是否可用必须以 `/api/health/ready` 为准。
+`npm run check` 依次执行前端 ESLint、TypeScript 检查、生产构建、后端与 Demo Ruff、后端 pytest，以及 Demo 回放单元测试。`/api/health/live` 只表示 API 进程存活；数据库、缓存和对象存储是否可用必须以 `/api/health/ready` 为准。
 
 ## 目录结构
 
