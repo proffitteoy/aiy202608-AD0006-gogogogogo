@@ -21,18 +21,32 @@ RiskTrace 将突发事件后的信息浏览压缩为一条可复核链路：统�
 
 ## 产品预览
 
-<p align="center">
-  <img src="docs/assets/previews/risk-overview.png" alt="RiskTrace 风险总览：事件、评分区间和来源数量" width="50%">
-</p>
-
-<p align="center"><sub>风险总览：从固定 Demo 研究上下文读取事件、Rule 3/4 评分与来源统计。</sub></p>
-
-<p align="center">
-  <img src="docs/assets/previews/event-workbench.png" alt="RiskTrace 事件工作台：时间线、观点归因、传导假设和影响矩阵" width="50%">
-</p>
-
-<p align="center"><sub>事件工作台：已生成的研究产物正常展示；缺失的传导与影响矩阵明确标记为未生成。</sub></p>
-
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img
+        src="docs/assets/previews/risk-overview.png"
+        alt="RiskTrace 风险总览：事件、评分区间和来源数量"
+        width="100%"
+      >
+    </td>
+    <td align="center" width="50%">
+      <img
+        src="docs/assets/previews/event-workbench.png"
+        alt="RiskTrace 事件工作台：时间线、观点归因、传导假设和影响矩阵"
+        width="100%"
+      >
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <sub>风险总览：从固定 Demo 研究上下文读取事件、Rule 3/4 评分与来源统计。</sub>
+    </td>
+    <td align="center">
+      <sub>事件工作台：已生成的研究产物正常展示；缺失的传导与影响矩阵明确标记为未生成。</sub>
+    </td>
+  </tr>
+</table>
 ## 为什么是 RiskTrace
 
 | 能力 | 当前实现 |
