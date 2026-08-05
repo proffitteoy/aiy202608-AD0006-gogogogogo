@@ -32,7 +32,7 @@ RiskTrace 将突发事件后的信息浏览压缩为一条可复核链路：统�
     </td>
     <td align="center" width="50%">
       <img
-        src="docs/assets/previews/event-workbench.png"
+        src="docs/assets/previews/微信图片_20260805231426_204_6453.png"
         alt="RiskTrace 事件工作台：时间线、观点归因、传导假设和影响矩阵"
         width="100%"
       >
