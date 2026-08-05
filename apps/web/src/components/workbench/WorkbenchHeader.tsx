@@ -34,13 +34,13 @@ export function WorkbenchHeader({ detail, sourceCount }: Props) {
       <div className={styles.right}>
         <div className={styles.meta}>
           <div className={styles.metaCell}>
-            <span className="eyebrow">Rule 3</span>
+            <span className="eyebrow">原始评分</span>
             <span className={styles.metaValue} data-numeric>
               {formatScore(detail.score.rawScore)}
             </span>
           </div>
           <div className={styles.metaCell}>
-            <span className="eyebrow">Rule 4</span>
+            <span className="eyebrow">校准评分</span>
             <span className={styles.metaValue} data-numeric>
               {formatScore(detail.score.calibratedScore)}
             </span>

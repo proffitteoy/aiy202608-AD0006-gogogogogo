@@ -36,7 +36,10 @@ from risktrace.reports.schemas import (
 )
 
 TEMPLATE_RENDER_ENGINE = "template-render-v1"
-BRIEF_PROMPT_VERSION = "template-report-v1"
+# brief_prompt_version also tracks the wording contract for template rendering:
+# keep recommendations evidence-grounded, avoid investment advice, and surface
+# missing coverage or degraded scoring explicitly.
+BRIEF_PROMPT_VERSION = "template-report-v2"
 
 STATUS_LABELS = {
     "candidate": "候选",
@@ -373,6 +376,96 @@ def _statement(
     )
 
 
+def _build_recommendation_items(
+    payload: AnalysisSnapshotPayload,
+    *,
+    summary_evidence_ids: list[uuid.UUID],
+    score_calculation_ids: list[uuid.UUID],
+) -> tuple[list[ReportStatement], str]:
+    recommendations: list[ReportStatement] = []
+    authoritative_ratio = (
+        payload.event.authoritative_source_count / payload.event.source_count
+        if payload.event.source_count > 0
+        else 0.0
+    )
+    confidence = payload.score.confidence
+    top_impact = payload.impact_matrix[0] if payload.impact_matrix else None
+    top_transmission = payload.transmission[0] if payload.transmission else None
+
+    needs_verification = (
+        payload.score.status != "complete"
+        or confidence is None
+        or confidence < 0.7
+        or authoritative_ratio < 0.3
+    )
+    if needs_verification:
+        recommendations.append(
+            _statement(
+                "recommendation-verify",
+                (
+                    "建议先补强事实源与评分复核：优先核对公告、监管或权威新闻的时间线，"
+                    "确认当前 Rule 4 评分与证据覆盖是否仍成立，再决定是否升级为对外研究结论。"
+                ),
+                evidence_ids=summary_evidence_ids,
+                calculation_ids=score_calculation_ids,
+            )
+        )
+    else:
+        recommendations.append(
+            _statement(
+                "recommendation-follow-up",
+                (
+                    "建议把后续跟踪聚焦在已确认信号的持续性：观察新增证据是否继续支持当前评分区间，"
+                    "并按同一 scoring_version 复算，避免把一次性噪声误读为趋势延续。"
+                ),
+                evidence_ids=summary_evidence_ids,
+                calculation_ids=score_calculation_ids,
+            )
+        )
+
+    if top_impact is not None:
+        recommendations.append(
+            _statement(
+                "recommendation-impact",
+                (
+                    f"建议优先复核 {top_impact.entity_name} 的暴露链路与业务映射，"
+                    f"当前冻结快照已将其列为 {DIRECTION_LABELS.get(top_impact.direction, top_impact.direction)} 方向的"
+                    "重点对象；研究员应结合主营业务、时间周期和新增证据，确认影响是否足以进入正式跟踪池。"
+                ),
+                evidence_ids=top_impact.evidence_ids[:6] or summary_evidence_ids[:3],
+            )
+        )
+        status = "degraded" if needs_verification else "complete"
+        return recommendations[:2], status
+
+    if top_transmission is not None:
+        recommendations.append(
+            _statement(
+                "recommendation-transmission",
+                (
+                    f"建议围绕“{top_transmission.from_node_label or '上游节点'} -> "
+                    f"{top_transmission.to_node_label or '下游节点'}”这条主传导候选做人工复核，"
+                    "重点确认机制描述、作用期限与反向证据，避免把候选传导边直接当作既成事实。"
+                ),
+                evidence_ids=top_transmission.evidence_ids[:6] or summary_evidence_ids[:3],
+            )
+        )
+        status = "degraded" if needs_verification else "complete"
+        return recommendations[:2], status
+
+    recommendations.append(
+        _statement(
+            "recommendation-gap",
+            (
+                "建议补做影响对象与传导路径梳理。当前冻结快照尚未形成可验证的影响矩阵或主传导边，"
+                "后续研究应先明确受影响行业、公司与证据缺口，再决定是否继续扩展结论范围。"
+            ),
+            evidence_ids=summary_evidence_ids[:3],
+        )
+    )
+    return recommendations[:2], "degraded"
+
+
 def _render_html(title: str, summary: str, sections: list[ReportSection]) -> str:
     parts = [
         "<article class=\"risktrace-report\">",
@@ -563,6 +656,20 @@ def _render_report(payload: AnalysisSnapshotPayload) -> RenderedReport:
             title="影响对象",
             status="complete" if payload.impact_matrix else "degraded",
             items=impact_items,
+        )
+    )
+
+    recommendation_items, recommendation_status = _build_recommendation_items(
+        payload,
+        summary_evidence_ids=summary_evidence_ids,
+        score_calculation_ids=score_calculation_ids,
+    )
+    sections.append(
+        ReportSection(
+            id="recommendations",
+            title="研究建议",
+            status=recommendation_status,
+            items=recommendation_items,
         )
     )
 

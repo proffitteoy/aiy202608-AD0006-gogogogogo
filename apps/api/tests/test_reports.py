@@ -111,10 +111,17 @@ def _payload() -> AnalysisSnapshotPayload:
 
 def test_report_render_keeps_evidence_and_calculation_references() -> None:
     rendered = _render_report(_payload())
+    recommendation_section = next(
+        section for section in rendered.sections if section.id == "recommendations"
+    )
 
     assert rendered.status == "complete"
     assert rendered.evidence_ids
     assert rendered.calculation_ids
+    assert len(recommendation_section.items) == 2
+    assert recommendation_section.status == "complete"
+    assert any(item.evidence_ids for item in recommendation_section.items)
+    assert any(item.calculation_ids for item in recommendation_section.items)
     assert any(item.evidence_ids for section in rendered.sections for item in section.items)
     assert any(
         item.calculation_ids for section in rendered.sections for item in section.items
