@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 TENANT_ID = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 EVENT_ID = uuid.UUID("e1000000-0000-0000-0000-000000000001")
 
-DOC_IDS = [uuid.UUID(f"d{i:08d}-0000-0000-0000-000000000001") for i in range(1, 21)]
+DOC_IDS = [uuid.UUID(f"{i:08d}-0000-0000-0000-000000000001") for i in range(1, 21)]
 
 tz = timezone.utc
 
@@ -14,7 +14,30 @@ EVENT: dict = {
     "title": "国家能源局调整光伏发电上网电价",
     "status": "active",
     "first_published_at": datetime(2024, 3, 14, 8, 0, 0, tzinfo=tz),
+    "last_seen_at": datetime(2024, 3, 15, 18, 0, 0, tzinfo=tz),
 }
+
+ENTITY_IDS = {
+    "光伏产业": uuid.UUID("e0000001-0000-0000-0000-000000000001"),
+    "隆基绿能": uuid.UUID("e0000002-0000-0000-0000-000000000001"),
+    "通威股份": uuid.UUID("e0000003-0000-0000-0000-000000000001"),
+    "阳光电源": uuid.UUID("e0000004-0000-0000-0000-000000000001"),
+    "晶科能源": uuid.UUID("e0000005-0000-0000-0000-000000000001"),
+    "储能行业": uuid.UUID("e0000006-0000-0000-0000-000000000001"),
+    "电力设备": uuid.UUID("e0000007-0000-0000-0000-000000000001"),
+    "国家能源局": uuid.UUID("e0000008-0000-0000-0000-000000000001"),
+}
+
+ENTITIES: list[dict] = [
+    {"id": ENTITY_IDS["光伏产业"], "tenant_id": TENANT_ID, "entity_type": "industry", "name": "光伏产业", "canonical_code": "SOLAR-INDUSTRY"},
+    {"id": ENTITY_IDS["隆基绿能"], "tenant_id": TENANT_ID, "entity_type": "company", "name": "隆基绿能", "canonical_code": "601012.SH"},
+    {"id": ENTITY_IDS["通威股份"], "tenant_id": TENANT_ID, "entity_type": "company", "name": "通威股份", "canonical_code": "600438.SH"},
+    {"id": ENTITY_IDS["阳光电源"], "tenant_id": TENANT_ID, "entity_type": "company", "name": "阳光电源", "canonical_code": "300274.SZ"},
+    {"id": ENTITY_IDS["晶科能源"], "tenant_id": TENANT_ID, "entity_type": "company", "name": "晶科能源", "canonical_code": "688223.SH"},
+    {"id": ENTITY_IDS["储能行业"], "tenant_id": TENANT_ID, "entity_type": "industry", "name": "储能行业", "canonical_code": "STORAGE-INDUSTRY"},
+    {"id": ENTITY_IDS["电力设备"], "tenant_id": TENANT_ID, "entity_type": "industry", "name": "电力设备", "canonical_code": "POWER-EQUIPMENT"},
+    {"id": ENTITY_IDS["国家能源局"], "tenant_id": TENANT_ID, "entity_type": "organization", "name": "国家能源局", "canonical_code": "NEA"},
+]
 
 RAW_DOCUMENTS: list[dict] = [
     # ── fact (2) ──
@@ -101,7 +124,7 @@ RAW_DOCUMENTS: list[dict] = [
         "published_at": datetime(2024, 3, 14, 14, 0, 0, tzinfo=tz),
         "collected_at": datetime(2024, 3, 14, 14, 5, 0, tzinfo=tz),
         "title": "光伏板块集体低开 机构称市场过度反应",
-        "raw_text": "受电价新政影响，今日光伏板块集体低开。中证光伏产业指数开盘跌2.3%，隆基绿能跌3.1%，通威股份跌2.8%。但多位分析师认为市场存在过度反应。兴业证券新能源首席表示，电价新政早在市场预期之内，且龙头企业已做好充分准备，建议关注低吸机会。华泰证券也维持光伏行业"增持"评级。",
+        "raw_text": "受电价新政影响，今日光伏板块集体低开。中证光伏产业指数开盘跌2.3%，隆基绿能跌3.1%，通威股份跌2.8%。但多位分析师认为市场存在过度反应。兴业证券新能源首席表示，电价新政早在市场预期之内，且龙头企业已做好充分准备，建议关注低吸机会。华泰证券也维持光伏行业“增持”评级。",
         "language": "zh-CN",
         "engagement": {"views": 56000, "comments": 452, "shares": 1500},
         "is_original": True,
@@ -412,7 +435,7 @@ EVENT_DOCUMENTS: list[dict] = [
 
 EVIDENCE_LINKS: list[dict] = [
     {
-        "id": uuid.UUID(f"e{i:08d}-0000-0000-0000-000000000001"),
+        "id": uuid.UUID(f"{i:08d}-0000-0000-0000-000000000002"),
         "tenant_id": TENANT_ID,
         "conclusion_type": "event",
         "conclusion_id": EVENT_ID,

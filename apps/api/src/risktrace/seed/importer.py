@@ -1,13 +1,12 @@
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from risktrace.db.models import Event, EventDocument, EvidenceLink, RawDocument
-from risktrace.seed.data import EVENT, EVENT_DOCUMENTS, EVIDENCE_LINKS, RAW_DOCUMENTS
+from risktrace.db.models import Entity, Event, EventDocument, EvidenceLink, RawDocument
+from risktrace.seed.data import ENTITIES, EVENT, EVENT_DOCUMENTS, EVIDENCE_LINKS, RAW_DOCUMENTS
 
 
 class SeedImporter:
@@ -18,6 +17,7 @@ class SeedImporter:
     async def import_all(self) -> dict:
         stats = {
             "event": await self._import_event(),
+            "entities": await self._import_entities(),
             "documents": await self._import_documents(),
             "event_documents": await self._link_documents(),
             "evidence_links": await self._import_evidence_links(),
@@ -33,6 +33,18 @@ class SeedImporter:
             return {"inserted": 0, "skipped": 1}
         self.session.add(Event(**EVENT))
         return {"inserted": 1, "skipped": 0}
+
+    async def _import_entities(self) -> dict[str, int]:
+        inserted = 0
+        skipped = 0
+        for entity_data in ENTITIES:
+            existing = await self.session.get(Entity, entity_data["id"])
+            if existing:
+                skipped += 1
+                continue
+            self.session.add(Entity(**entity_data))
+            inserted += 1
+        return {"inserted": inserted, "skipped": skipped}
 
     async def _import_documents(self) -> dict[str, int]:
         inserted = 0
@@ -103,7 +115,7 @@ class SeedImporter:
         self.checkpoint_path.write_text(
             json.dumps(
                 {
-                    "last_import_at": datetime.now(tz=timezone.utc).isoformat(),
+                    "last_import_at": datetime.now(tz=UTC).isoformat(),
                     "stats": stats,
                     "status": "complete",
                 },

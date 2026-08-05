@@ -6,8 +6,10 @@ from risktrace.db.models import (
     EventDocument,
     EventMetric,
     EvidenceLink,
+    OpinionRecord,
     PlatformBaseline,
     RawDocument,
+    TransmissionEdge,
 )
 
 
@@ -19,8 +21,10 @@ def test_core_traceability_tables_are_registered() -> None:
         "event_metrics",
         "events",
         "evidence_links",
+        "opinion_records",
         "platform_baselines",
         "raw_documents",
+        "transmission_edges",
     }
 
 
@@ -65,3 +69,37 @@ def test_event_engine_tables_keep_versions_inputs_and_tenant_scope() -> None:
     assert EventMetric.__table__.columns["input_document_ids"].nullable is False
     assert EventMetric.__table__.columns["rule_version"].nullable is False
     assert PlatformBaseline.__table__.columns["tenant_id"].nullable is False
+
+
+def test_opinion_record_fields() -> None:
+    columns = OpinionRecord.__table__.columns
+    assert columns["tenant_id"].nullable is False
+    assert columns["event_id"].nullable is False
+    assert columns["document_id"].nullable is False
+    assert columns["stance"].nullable is False
+    assert columns["emotion"].nullable is False
+    assert columns["reason"].nullable is False
+    assert columns["claim_type"].nullable is False
+    assert columns["evidence_span"].nullable is False
+    assert columns["model_confidence"].nullable is False
+    assert columns["model_version"].nullable is False
+    assert columns["prompt_version"].nullable is False
+    assert columns["input_hash"].nullable is False
+
+
+def test_transmission_edge_fields() -> None:
+    columns = TransmissionEdge.__table__.columns
+    assert columns["tenant_id"].nullable is False
+    assert columns["event_id"].nullable is False
+    assert columns["from_node_type"].nullable is False
+    assert columns["from_node_id"].nullable is False
+    assert columns["to_node_type"].nullable is False
+    assert columns["to_node_id"].nullable is False
+    assert columns["mechanism"].nullable is False
+    assert columns["direction"].nullable is False
+    assert columns["horizon"].nullable is False
+    assert columns["model_confidence"].nullable is False
+    assert columns["status"].nullable is False
+    assert columns["model_version"].nullable is False
+    assert columns["prompt_version"].nullable is False
+    assert columns["input_hash"].nullable is False
