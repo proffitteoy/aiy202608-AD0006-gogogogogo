@@ -16,19 +16,51 @@ from risktrace.db.session import get_db
 router = APIRouter(prefix="/events", tags=["transmission"])
 DemoTenantId = Annotated[uuid.UUID, Depends(get_demo_tenant_id)]
 DbSession = Annotated[AsyncSession, Depends(get_db)]
+PLACEHOLDER_LLM_KEYS = frozenset(
+    {
+        "sk-your-key-here",
+        "your-api-key",
+        "changeme",
+    }
+)
+
+
+def _load_agent_class():
+    from risktrace.agents.transmission import TransmissionGraphAgent
+    return TransmissionGraphAgent
+
+
+def _has_usable_llm_api_key(value: str) -> bool:
+    cleaned = value.strip()
+    return bool(cleaned) and cleaned not in PLACEHOLDER_LLM_KEYS
+
+
+def _is_llm_unavailable_error(exc: RuntimeError) -> bool:
+    detail = str(exc)
+    return (
+        "LLM 请求失败" in detail
+        or "All connection attempts failed" in detail
+        or "Connection refused" in detail
+        or "Name or service not known" in detail
+        or "nodename nor servname provided" in detail
+        or "Temporary failure in name resolution" in detail
+        or "LLM 接口返回 HTTP 5" in detail
+    )
 
 
 def _build_agent(session: AsyncSession):
-    from risktrace.agents.transmission import TransmissionGraphAgent
     from risktrace.core.config import get_settings
 
     settings = get_settings()
-    if not settings.llm_api_key:
+    if not _has_usable_llm_api_key(settings.llm_api_key):
         raise HTTPException(
             status_code=503,
-            detail="LLM API key not configured. Set RISKTRACE_LLM_API_KEY in .env",
+            detail=(
+                "当前环境未配置可用的 LLM API Key，"
+                "请先在 .env 中设置真实的 RISKTRACE_LLM_API_KEY。"
+            ),
         )
-    return TransmissionGraphAgent(session)
+    return _load_agent_class()(session)
 
 
 @router.get("/{event_id}/transmission", response_model=TransmissionListResponse)
@@ -99,15 +131,27 @@ async def generate_transmission(
     if event is None:
         raise HTTPException(status_code=404, detail="Event not found")
 
-    agent = _build_agent(db)
     try:
+        agent = _build_agent(db)
         edges = await agent.generate_for_event(event_id)
+    except HTTPException:
+        raise
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        if _is_llm_unavailable_error(exc):
+            raise HTTPException(
+                status_code=503,
+                detail=f"当前 LLM 服务不可达，传导候选暂时无法生成：{exc}",
+            ) from exc
+        raise HTTPException(
+            status_code=502,
+            detail=f"传导假设生成失败：{exc}",
+        ) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=500,
-            detail=f"Transmission generation failed: {exc}",
+            detail=f"传导假设生成失败：{exc}",
         ) from exc
 
     return {

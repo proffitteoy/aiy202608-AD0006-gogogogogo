@@ -30,10 +30,10 @@ RiskTrace 不是空壳。仓库已有双应用结构、统一写入、只读业�
 | 维度 | 估计 | 仓库事实 | 解释 |
 | --- | ---: | --- | --- |
 | 工程基础设施 | 70% | Next.js、FastAPI、Compose、PostgreSQL、Redis、MinIO、Alembic、检查入口均已落库 | 指工程基线完成度，不代表完整栈已在本次评估中运行验证 |
-| 数据模型 | 70% | 已有 RawDocument、Event、Evidence、Opinion、Transmission、Metric 与 ScoreCalibration | EventTag、AnalysisSnapshot、Report 和 Alert 尚未落库 |
+| 数据模型 | 75% | 已有 RawDocument、Event、Evidence、Opinion、Transmission、Metric、ScoreCalibration、AnalysisSnapshot 与 Report | EventTag 和 Alert 尚未落库 |
 | 业务后端 | 55% | 固定 importer、统一写入、同步确定性 Rule 1–4 持久化与只读业务 API 已实现 | 真实 Adapter、可靠处理状态/重试、后台调度和数据库运行验收尚未形成 |
-| 研究工作台 UI | 50% | 事件总览、工作台、评分、时间线、观点/传导只读视图和证据抽屉已读取真实 API | 真实数据库运行验收、EventTag、Snapshot、报告、影响矩阵、告警和导出尚未完成 |
-| Agent / LLM | 0% | Agent 1/2 仅有设计；旧独立 Agent 执行入口和未使用框架依赖已移除 | 可选 embedding 依赖不计为 Agent 产品能力 |
+| 研究工作台 UI | 60% | 事件总览、工作台、评分、时间线、观点/传导只读视图、热力矩阵、证据抽屉和报告页已读取真实 API | 真实数据库运行验收、EventTag、告警和导出尚未完成 |
+| Agent / LLM | 15% | 传导假设生成已可复用 `RISKTRACE_LLM_*` 配置调用 OpenAI 兼容接口；观点/传导只读查询与前端展示已接线 | Agent 1、观点归因生成、schema 评估、LLM 报告 Render 与调度仍未完成 |
 | 完整 Demo 闭环 | 35–40% | 来源转换、回放、统一写入、确定性流水线、只读 API 和 Web 源码已串联 | 处理结果状态、真实回放和浏览器端到端验收尚未完成 |
 
 整体约为 45–50%，只适合作为方向性判断。后续不再以仓库文件数、第三方源码量或基础设施组件数衡量产品完成度，而以端到端验收场景是否成立衡量。
@@ -108,10 +108,10 @@ Source Adapters
 | 原始数据契约 | 四类来源、统一 `RawDocument`、UTC、来源许可 | 严格 SourceRecord、统一写入 API、ORM、迁移与固定 seed importer 已实现 | 合规真实 Adapter、拒绝记录和调度 | 接入落库源码已完成，本次未做数据库运行验证 |
 | 幂等与去重 | cursor/checkpoint、精确与近似去重 | 租户级来源键、content hash、追加 receipt、checkpoint 表和规则层去重已实现 | Adapter 批次原子性、duplicate group 持久化和传播链 | 写入边界已落库，生产采集流水线仍未形成 |
 | Event | 聚类、热度、状态机、历史回放同引擎 | Event 表、复合匹配、聚类中心、热度、确认、生命周期与同步持久化编排 | 真实回放验收、可靠状态与重试 | 源码调用链已接，运行闭环未验收 |
-| 研究工作台 | 总览、时间线、观点、传导、影响矩阵、证据 | 总览、工作台、文档量时间线、评分、观点/传导只读展示和证据抽屉 | EventTag、影响矩阵、Snapshot、报告、告警、导出和运行验收 | 已消费真实契约，未生成内容不使用 mock |
+| 研究工作台 | 总览、时间线、观点、传导、影响矩阵、证据 | 总览、工作台、文档量时间线、评分、观点/传导只读展示、热力矩阵、证据抽屉和报告页 | EventTag、告警、导出和运行验收 | 已消费真实契约，未生成内容不使用 mock |
 | 业务 API | `/api/events`、`/{id}/workspace`、`/{id}/evidence` 等 | 统一写入、确定性处理、事件/评分摘要、工作台、证据、文档及结构化分析只读查询已实现并被前端消费 | 处理状态/重试、Snapshot 与报告 API | 原始接入与下游权威处理仍保持边界 |
 | 风险评分 | Rule 3 版本化确定性评分、Rule 4 后验校准与 `calculation_id` | `deterministic-scoring-v1`、`score-calibration-v1`、迁移、同步持久化和 UI 读取已实现 | 真实特征映射与历史回放验收 | 源码已进入业务调用路径，不等于生产运行已验证 |
-| Agent / LLM | Agent 1 事件标签、Agent 2 观点归因/传导假设/报告及严格证据校验 | Opinion/Transmission 数据结构、只读查询与 UI 展示 | Agent 1/2 调用、schema 校验、降级、Snapshot 与评估 | 旧独立 Agent 写入入口和未使用框架依赖已移除，按新顺序实现 |
+| Agent / LLM | Agent 1 事件标签、Agent 2 观点归因/传导假设/报告及严格证据校验 | Transmission generate 已接线到 LLM；Opinion/Transmission 数据结构、只读查询与 UI 展示，以及模板报告与 Snapshot 已实现 | Agent 1、观点归因生成、schema 评估、LLM 报告 Render 与调度 | 仍坚持证据/实体 ID 校验，不改 Rule 3/4 分数 |
 | Demo 访问模型 | 服务端固定 Demo 上下文，不做角色系统 | 所有业务查询使用服务端固定 tenant 过滤 | 写操作审计和未来真实租户上下文 | Demo 不实现登录、角色和权限后台 |
 
 ### 3.1 对原始建议的三处校正
@@ -127,7 +127,7 @@ Source Adapters
 继续冻结横向基础设施扩张：
 
 - 不新增数据库、中间件、消息系统、Agent 框架或大体量第三方源码。
-- 已接线的 ECharts、XYFlow 与 pgvector 继续保留；Sentence Transformers 改为按需安装。没有运行调用链的 Celery、Pydantic AI 与 Pydantic Graph 不再预置。
+- 已接线的 ECharts、XYFlow 与 pgvector 继续保留；Sentence Transformers 改为按需安装。Transmission generate 直接复用内置 `httpx` 调 OpenAI 兼容接口，不预置额外 Agent 框架。
 - 只有当前纵向切片出现可复现阻塞，并证明现有能力无法解决时，才讨论新增依赖。
 - LLM 在历史回放、Event、时间线、证据下钻和 Rule 3/4 评分链通过验收前保持关闭。
 - 历史 fixture 必须有来源说明、采集/整理方式、许可范围和时间语义；不能使用看似真实但无法追溯的假数据。

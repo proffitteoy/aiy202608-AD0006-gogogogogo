@@ -602,3 +602,99 @@ class EventScoreCalibration(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+class AnalysisSnapshot(Base):
+    __tablename__ = "analysis_snapshots"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id",
+            "event_id",
+            "snapshot_hash",
+            name="uq_analysis_snapshots_event_hash",
+        ),
+        CheckConstraint(
+            "snapshot_kind IN ('report')",
+            name="ck_analysis_snapshots_kind",
+        ),
+        CheckConstraint(
+            "evidence_count >= 0 AND source_count >= 0",
+            name="ck_analysis_snapshots_counts",
+        ),
+        Index("ix_analysis_snapshots_event_time", "event_id", "snapshot_at"),
+        Index("ix_analysis_snapshots_tenant_time", "tenant_id", "snapshot_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    event_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("events.id", ondelete="CASCADE"), nullable=False
+    )
+    score_calibration_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("event_score_calibrations.calculation_id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    snapshot_kind: Mapped[str] = mapped_column(String(16), nullable=False, default="report")
+    analysis_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    snapshot_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    evidence_snapshot_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    score_status: Mapped[str] = mapped_column(String(16), nullable=False)
+    evidence_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    source_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    scoring_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    calibration_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    event_payload: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False)
+    score_payload: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False)
+    evidence_payload: Mapped[list[dict[str, object]]] = mapped_column(JSON, nullable=False)
+    opinion_payload: Mapped[list[dict[str, object]]] = mapped_column(JSON, nullable=False)
+    transmission_payload: Mapped[list[dict[str, object]]] = mapped_column(JSON, nullable=False)
+    impact_payload: Mapped[list[dict[str, object]]] = mapped_column(JSON, nullable=False)
+    snapshot_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class Report(Base):
+    __tablename__ = "reports"
+    __table_args__ = (
+        UniqueConstraint(
+            "snapshot_id",
+            "format",
+            "render_engine",
+            name="uq_reports_snapshot_format_engine",
+        ),
+        CheckConstraint(
+            "format IN ('html')",
+            name="ck_reports_format",
+        ),
+        CheckConstraint(
+            "status IN ('complete', 'degraded')",
+            name="ck_reports_status",
+        ),
+        Index("ix_reports_event_created", "event_id", "created_at"),
+        Index("ix_reports_tenant_created", "tenant_id", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    event_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("events.id", ondelete="CASCADE"), nullable=False
+    )
+    snapshot_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("analysis_snapshots.id", ondelete="CASCADE"), nullable=False
+    )
+    format: Mapped[str] = mapped_column(String(16), nullable=False, default="html")
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="complete")
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    summary: Mapped[str] = mapped_column(Text, nullable=False)
+    render_engine: Mapped[str] = mapped_column(String(64), nullable=False)
+    brief_prompt_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    body_html: Mapped[str] = mapped_column(Text, nullable=False)
+    sections: Mapped[list[dict[str, object]]] = mapped_column(JSON, nullable=False)
+    evidence_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    calculation_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    degradation_reasons: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )

@@ -1,5 +1,6 @@
 from risktrace.db.base import Base
 from risktrace.db.models import (
+    AnalysisSnapshot,
     Entity,
     Event,
     EventAdmissionRecord,
@@ -11,6 +12,7 @@ from risktrace.db.models import (
     OpinionRecord,
     PlatformBaseline,
     RawDocument,
+    Report,
     SourceCheckpoint,
     SourceHealth,
     TransmissionEdge,
@@ -19,6 +21,7 @@ from risktrace.db.models import (
 
 def test_core_traceability_tables_are_registered() -> None:
     assert set(Base.metadata.tables) == {
+        "analysis_snapshots",
         "entities",
         "event_admission_records",
         "event_documents",
@@ -30,6 +33,7 @@ def test_core_traceability_tables_are_registered() -> None:
         "opinion_records",
         "platform_baselines",
         "raw_documents",
+        "reports",
         "source_checkpoints",
         "source_health",
         "transmission_edges",
@@ -162,3 +166,57 @@ def test_score_calibration_keeps_rule3_inputs_and_degradation_state() -> None:
     assert columns["lower_bound"].nullable is False
     assert columns["market_data_completeness"].nullable is True
     assert "updated_at" not in columns
+
+
+def test_analysis_snapshot_freezes_event_score_and_evidence_payloads() -> None:
+    columns = AnalysisSnapshot.__table__.columns
+    for required_column in (
+        "tenant_id",
+        "event_id",
+        "score_calibration_id",
+        "snapshot_kind",
+        "analysis_version",
+        "snapshot_hash",
+        "evidence_snapshot_hash",
+        "score_status",
+        "evidence_count",
+        "source_count",
+        "event_payload",
+        "score_payload",
+        "evidence_payload",
+        "opinion_payload",
+        "transmission_payload",
+        "impact_payload",
+        "snapshot_at",
+    ):
+        assert required_column in columns
+
+    assert columns["tenant_id"].nullable is False
+    assert columns["event_payload"].nullable is False
+    assert columns["score_payload"].nullable is False
+    assert columns["snapshot_hash"].nullable is False
+
+
+def test_report_keeps_snapshot_render_output_and_references() -> None:
+    columns = Report.__table__.columns
+    for required_column in (
+        "tenant_id",
+        "event_id",
+        "snapshot_id",
+        "format",
+        "status",
+        "title",
+        "summary",
+        "render_engine",
+        "brief_prompt_version",
+        "body_html",
+        "sections",
+        "evidence_ids",
+        "calculation_ids",
+        "degradation_reasons",
+    ):
+        assert required_column in columns
+
+    assert columns["snapshot_id"].nullable is False
+    assert columns["body_html"].nullable is False
+    assert columns["sections"].nullable is False

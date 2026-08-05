@@ -297,5 +297,5 @@ Rule 4 直接校准 `raw_score`，没有 Agent 调分入口。第五个迁移保
 首次统一接入会同步尽力执行确定性流水线，写入 Rule 1/2 准入、Event/Evidence 关联、EventMetric 和
 Rule 3/4 校准记录；但该数据库调用路径尚未完成真实回放验收，也没有可靠处理状态、重试或后台调度。
 旧的 Opinion/Transmission 独立 Agent 执行入口已移除，只保留结构化对象、只读查询和前端展示。
-Agent 1、Agent 2、Evidence Mapper、AnalysisSnapshot 与报告生成仍未实现，因此不能声称 Agent
-闭环或完整 MVP 已运行。
+当前已实现 `AnalysisSnapshot` 与基于冻结 snapshot 的模板报告生成/读取；Agent 1、Agent 2、
+Evidence Mapper 与 LLM 版 Report Render 仍未实现，因此不能声称 Agent 闭环或完整 MVP 已运行。

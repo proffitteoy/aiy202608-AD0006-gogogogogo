@@ -23,6 +23,15 @@ DIRECTION_ORDER = {"positive": 0, "uncertain": 1, "negative": 2}
 HORIZON_ORDER = {"immediate": 0, "short": 1, "medium": 2, "long": 3}
 
 
+def _normalize_uuid(value: uuid.UUID | str) -> uuid.UUID | None:
+    if isinstance(value, uuid.UUID):
+        return value
+    try:
+        return uuid.UUID(str(value))
+    except (TypeError, ValueError, AttributeError):
+        return None
+
+
 @dataclass(frozen=True, slots=True)
 class ImpactRow:
     entity_id: uuid.UUID
@@ -38,6 +47,7 @@ class ImpactRow:
     edge_count: int
     opinion_count: int
     evidence_count: int
+    evidence_ids: list[uuid.UUID]
 
 
 async def compute_impact_matrix(
@@ -119,7 +129,7 @@ async def compute_impact_matrix(
     fact_doc_ids = {d.id for d in doc_rows if d.source_type in ("fact", "news")}
 
     rows: list[ImpactRow] = []
-    for entity_id in sorted(all_entity_ids):
+    for entity_id in sorted(all_entity_ids, key=str):
         entity = entities_by_id.get(entity_id)
         if entity is None:
             continue
@@ -156,11 +166,19 @@ async def compute_impact_matrix(
         else:
             opinion_support = 0.0
 
-        fact_count = sum(
-            1 for e in entity_edges
-            for did in (e.evidence_ids or [])
-            if did in fact_doc_ids
+        evidence_ids = sorted(
+            {
+                normalized
+                for edge in entity_edges
+                for raw_evidence_id in (edge.evidence_ids or [])
+                if (
+                    normalized := _normalize_uuid(raw_evidence_id)
+                ) is not None
+                and normalized in event_doc_ids
+            },
+            key=str,
         )
+        fact_count = sum(1 for evidence_id in evidence_ids if evidence_id in fact_doc_ids)
         fact_support = round(fact_count / max(1, edge_count * 2), 2)
         fact_support = min(fact_support, 1.0)
 
@@ -194,7 +212,8 @@ async def compute_impact_matrix(
                 composite_confidence=composite_confidence,
                 edge_count=edge_count,
                 opinion_count=opinion_count,
-                evidence_count=fact_count,
+                evidence_count=len(evidence_ids),
+                evidence_ids=evidence_ids,
             )
         )
 

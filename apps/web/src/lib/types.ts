@@ -42,6 +42,7 @@ export interface EventDetail extends EventSummary {
   timeline: TimelinePoint[];
   opinions: OpinionAttribution[];
   graph: TransmissionGraph;
+  impactMatrix: ImpactMatrixRow[];
   evidence: EvidenceItem[];
   availability: {
     evidence: Availability;
@@ -100,6 +101,23 @@ export interface TransmissionEdge {
   evidenceIds: string[];
 }
 
+export interface ImpactMatrixRow {
+  entityId: string;
+  entityName: string;
+  entityType: string;
+  direction: string;
+  impactStrength: number;
+  businessExposure: number;
+  opinionSupport: number;
+  factSupport: number;
+  timeHorizon: string;
+  compositeConfidence: number;
+  edgeCount: number;
+  opinionCount: number;
+  evidenceCount: number;
+  evidenceIds: string[];
+}
+
 export interface EvidenceItem {
   id: string;
   source: string;
@@ -119,4 +137,62 @@ export interface PlatformPulse {
   activeEvents: number;
   scoredEvents: number;
   documentCount: number;
+}
+
+export interface ReportStatement {
+  id: string;
+  text: string;
+  evidenceIds: string[];
+  calculationIds: string[];
+}
+
+export interface ReportSection {
+  id: string;
+  title: string;
+  status: string;
+  items: ReportStatement[];
+}
+
+export interface ReportSnapshotSummary {
+  id: string;
+  eventId: string;
+  snapshotAt: string;
+  analysisVersion: string;
+  scoreStatus: string;
+  evidenceCount: number;
+  sourceCount: number;
+  scoringVersion: string | null;
+  calibrationVersion: string | null;
+}
+
+export interface ReportEventSummary {
+  id: string;
+  title: string;
+  status: string;
+  publishedAt: string;
+  sourceCount: number;
+  authoritativeSourceCount: number;
+  sourceBreakdown: Record<string, number>;
+  score: EventScore;
+}
+
+export interface ResearchReport {
+  id: string;
+  eventId: string;
+  snapshotId: string;
+  format: string;
+  status: string;
+  title: string;
+  summary: string;
+  renderEngine: string;
+  briefPromptVersion: string;
+  bodyHtml: string;
+  evidenceIds: string[];
+  calculationIds: string[];
+  degradationReasons: string[];
+  createdAt: string;
+  snapshot: ReportSnapshotSummary;
+  event: ReportEventSummary;
+  sections: ReportSection[];
+  evidence: EvidenceItem[];
 }

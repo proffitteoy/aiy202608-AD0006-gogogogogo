@@ -32,7 +32,10 @@ async function forward(request: NextRequest, ctx: { params: Promise<{ path: stri
     cache: "no-store",
   };
   if (method !== "GET" && method !== "DELETE") {
-    init.body = await request.arrayBuffer();
+    const body = await request.text();
+    if (body.length > 0) {
+      init.body = body;
+    }
   }
 
   try {

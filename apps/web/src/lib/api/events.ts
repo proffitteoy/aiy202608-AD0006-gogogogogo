@@ -7,6 +7,7 @@ import { apiFetch } from "./client";
 import type {
   BackendEventSummary,
   BackendEvidenceItem,
+  BackendImpactMatrixRow,
   BackendOpinionItem,
   BackendTransmissionEdge,
   BackendWorkspaceResponse,
@@ -55,5 +56,14 @@ export async function fetchEventTransmission(id: string): Promise<{
 }> {
   return apiFetch<{ items: BackendTransmissionEdge[]; total: number }>(
     `/api/events/${id}/transmission`,
+  );
+}
+
+export async function fetchEventImpact(id: string): Promise<{
+  items: BackendImpactMatrixRow[];
+  total: number;
+}> {
+  return apiFetch<{ items: BackendImpactMatrixRow[]; total: number }>(
+    `/api/events/${id}/impact`,
   );
 }

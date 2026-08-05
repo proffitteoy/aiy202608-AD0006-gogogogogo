@@ -21,7 +21,7 @@ RiskTrace 当前采用一个仓库、两个应用的轻量结构，不拆分微�
 | --- | --- | --- |
 | `apps/web/src/app` | 页面、同源 API 代理与视觉状态 | 计算权威风险分数、暴露服务密钥 |
 | `apps/api/src/risktrace/api` | HTTP 路由与输入输出契约 | 直接堆积业务规则或数据库细节 |
-| `apps/api/src/risktrace/ingestion` | 严格 SourceRecord、租户级幂等存储、接收回执，以及调用 events/scoring 纯规则的确定性接入编排 | 在 Source Adapter 中做语义判断、信任请求体 tenant，或复制 events/scoring 算法 |
+| `apps/api/src/risktrace/ingestion` | 严格 SourceRecord、租户级幂等存储、接收回执、最小真实来源 adapter，以及调用 events/scoring 纯规则的确定性接入编排 | 在 Source Adapter 中做语义判断、信任请求体 tenant，或复制 events/scoring 算法 |
 | `apps/api/src/risktrace/core` | 配置和基础设施健康检查 | 承载金融语义判断 |
 | `apps/api/src/risktrace/db` | SQLAlchemy 元数据与持久化模型 | 绕过固定 Demo 上下文或后续租户边界 |
 | `apps/api/src/risktrace/events` | 事件准入、匹配、去重、指标与生命周期纯规则 | 发起网络调用、信任 LLM 直接裁决或隐藏缺失因子 |

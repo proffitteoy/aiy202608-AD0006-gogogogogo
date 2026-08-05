@@ -1,0 +1,87 @@
+.page {
+  min-height: 100vh;
+  padding: var(--space-6);
+}
+
+.shell {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+}
+
+.topbar {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+  margin-bottom: var(--space-5);
+  color: var(--text-secondary);
+  font-size: var(--text-body-s);
+}
+
+.topbar a {
+  color: inherit;
+  transition: color var(--dur-fast);
+}
+
+.topbar a:hover {
+  color: var(--text-primary);
+}
+
+.hero {
+  padding: var(--space-6);
+  margin-bottom: var(--space-5);
+  background:
+    radial-gradient(circle at top right, color-mix(in oklch, var(--accent) 14%, transparent), transparent 42%),
+    linear-gradient(160deg, var(--surface-0), color-mix(in oklch, var(--surface-2) 56%, var(--surface-0)));
+  border: 1px solid var(--border-subtle);
+  border-radius: 28px;
+}
+
+.title {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+.summary {
+  max-width: 780px;
+  margin: var(--space-3) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--text-body-l);
+  line-height: 1.7;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.metaCell {
+  padding: 8px 12px;
+  color: var(--text-secondary);
+  font-size: var(--text-body-s);
+  background: color-mix(in oklch, var(--surface-0) 84%, transparent);
+  border-radius: 999px;
+}
+
+.errorPage {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 720px;
+  margin: 12vh auto 0;
+  padding: var(--space-6);
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: var(--space-4);
+  }
+
+  .hero {
+    padding: var(--space-5);
+  }
+}

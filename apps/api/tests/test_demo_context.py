@@ -22,3 +22,4 @@ def test_old_independent_agent_execution_routes_are_not_exposed() -> None:
     assert "/api/events/{event_id}/generate-transmission" not in paths
     assert "/api/events/{event_id}/opinions" in paths
     assert "/api/events/{event_id}/transmission" in paths
+    assert "/api/reports" in paths

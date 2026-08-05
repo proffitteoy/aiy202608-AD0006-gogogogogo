@@ -296,6 +296,26 @@ export function TransmissionGraph({ graph, status, eventId }: Props) {
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
 
+  const normalizeGenerateError = useCallback((message: string) => {
+    if (message === "Not Found" || message.includes("HTTP 404")) {
+      return "当前 API 进程未暴露传导生成接口，请确认后端已重启到当前仓库版本。";
+    }
+    if (
+      message.includes("RISKTRACE_LLM_API_KEY") ||
+      message.includes("LLM API Key")
+    ) {
+      return "当前环境未配置可用的 LLM API Key，请检查 .env 中的 RISKTRACE_LLM_API_KEY。";
+    }
+    if (
+      message.includes("All connection attempts failed") ||
+      message.includes("LLM 请求失败") ||
+      message.includes("当前 LLM 服务不可达")
+    ) {
+      return "当前 LLM 服务不可达，传导候选暂时无法生成；事件工作台其余部分仍可继续使用。";
+    }
+    return message;
+  }, []);
+
   const handleGenerate = useCallback(async () => {
     setGenerating(true);
     setGenError(null);
@@ -310,11 +330,12 @@ export function TransmissionGraph({ graph, status, eventId }: Props) {
       }
       window.location.reload();
     } catch (err) {
-      setGenError(err instanceof Error ? err.message : String(err));
+      const rawMessage = err instanceof Error ? err.message : String(err);
+      setGenError(normalizeGenerateError(rawMessage));
     } finally {
       setGenerating(false);
     }
-  }, [eventId]);
+  }, [eventId, normalizeGenerateError]);
 
   if (status !== "available" || graph.edges.length === 0) {
     return (

@@ -17,6 +17,7 @@ class ImpactRowItem(BaseModel):
     edge_count: int
     opinion_count: int
     evidence_count: int
+    evidence_ids: list[uuid.UUID]
 
     model_config = {"from_attributes": True}
 

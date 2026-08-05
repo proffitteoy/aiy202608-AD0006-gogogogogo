@@ -105,3 +105,87 @@ export type BackendTransmissionEdge = {
   status: string;
   created_at: string;
 };
+
+export type BackendImpactMatrixRow = {
+  entity_id: string;
+  entity_name: string;
+  entity_type: string;
+  direction: string;
+  impact_strength: number;
+  business_exposure: number;
+  opinion_support: number;
+  fact_support: number;
+  time_horizon: string;
+  composite_confidence: number;
+  edge_count: number;
+  opinion_count: number;
+  evidence_count: number;
+  evidence_ids: string[];
+};
+
+export type BackendReportStatementItem = {
+  id: string;
+  text: string;
+  evidence_ids: string[];
+  calculation_ids: string[];
+};
+
+export type BackendReportSectionItem = {
+  id: string;
+  title: string;
+  status: string;
+  items: BackendReportStatementItem[];
+};
+
+export type BackendReportSnapshotSummary = {
+  id: string;
+  event_id: string;
+  snapshot_at: string;
+  analysis_version: string;
+  score_status: string;
+  evidence_count: number;
+  source_count: number;
+  scoring_version: string | null;
+  calibration_version: string | null;
+};
+
+export type BackendReportEventSummary = {
+  id: string;
+  title: string;
+  status: string;
+  first_published_at: string;
+  source_count: number;
+  authoritative_source_count: number;
+  source_breakdown: Record<string, number>;
+  score: BackendEventScore;
+};
+
+export type BackendReportCreateResponse = {
+  id: string;
+  event_id: string;
+  snapshot_id: string;
+  format: string;
+  status: string;
+  created_at: string;
+};
+
+export type BackendReportDetail = {
+  id: string;
+  event_id: string;
+  snapshot_id: string;
+  format: string;
+  status: string;
+  title: string;
+  summary: string;
+  render_engine: string;
+  brief_prompt_version: string;
+  body_html: string;
+  evidence_ids: string[];
+  calculation_ids: string[];
+  degradation_reasons: string[];
+  created_at: string;
+  snapshot: BackendReportSnapshotSummary;
+  event: BackendReportEventSummary;
+  sections: BackendReportSectionItem[];
+  evidence: BackendEvidenceItem[];
+};

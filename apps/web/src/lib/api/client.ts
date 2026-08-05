@@ -7,8 +7,12 @@
  * 统一抛 `ApiError`，业务层可以按 `error.status` 决定 fallback。
  */
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 const DEFAULT_BASE_URL = "http://127.0.0.1:8000";
 const DEFAULT_TIMEOUT_MS = 2500;
+const DEV_OVERRIDE_FILE = join(process.cwd(), "runtime", "api-base-url.txt");
 
 export class ApiError extends Error {
   readonly status: number;
@@ -23,6 +27,15 @@ export class ApiError extends Error {
 }
 
 export function getApiBaseUrl(): string {
+  try {
+    const override = readFileSync(DEV_OVERRIDE_FILE, "utf8").trim();
+    if (override) {
+      return override;
+    }
+  } catch {
+    // Ignore missing override file and fall back to env/default config.
+  }
+
   return process.env.RISKTRACE_API_URL?.trim() || DEFAULT_BASE_URL;
 }
 

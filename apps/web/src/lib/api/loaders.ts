@@ -1,14 +1,21 @@
-import type { EventDetail, EventSummary, PlatformPulse } from "@/lib/types";
+import type {
+  EventDetail,
+  EventSummary,
+  PlatformPulse,
+  ResearchReport,
+} from "@/lib/types";
 
-import { adaptEventDetail, adaptEventSummary } from "./adapters";
+import { adaptEventDetail, adaptEventSummary, adaptReportDetail } from "./adapters";
 import { ApiError } from "./client";
 import {
   fetchEventEvidence,
+  fetchEventImpact,
   fetchEventList,
   fetchEventOpinions,
   fetchEventTransmission,
   fetchEventWorkspace,
 } from "./events";
+import { fetchReport } from "./reports";
 
 export type ListLoadResult =
   | { status: "ready"; data: EventSummary[] }
@@ -16,6 +23,11 @@ export type ListLoadResult =
 
 export type DetailLoadResult =
   | { status: "ready"; data: EventDetail; warnings: string[] }
+  | { status: "not_found" }
+  | { status: "unavailable"; reason: string };
+
+export type ReportLoadResult =
+  | { status: "ready"; data: ResearchReport }
   | { status: "not_found" }
   | { status: "unavailable"; reason: string };
 
@@ -54,11 +66,12 @@ export function derivePulse(events: EventSummary[]): PlatformPulse {
 export async function loadEventDetail(id: string): Promise<DetailLoadResult> {
   try {
     const workspace = await fetchEventWorkspace(id);
-    const [evidenceResult, opinionsResult, transmissionResult] =
+    const [evidenceResult, opinionsResult, transmissionResult, impactResult] =
       await Promise.allSettled([
         fetchEventEvidence(id),
         fetchEventOpinions(id),
         fetchEventTransmission(id),
+        fetchEventImpact(id),
       ]);
 
     const evidence =
@@ -69,6 +82,8 @@ export async function loadEventDetail(id: string): Promise<DetailLoadResult> {
       transmissionResult.status === "fulfilled"
         ? transmissionResult.value.items
         : [];
+    const impactMatrix =
+      impactResult.status === "fulfilled" ? impactResult.value.items : [];
 
     const warnings: string[] = [];
     if (evidenceResult.status === "rejected") warnings.push("证据接口不可用");
@@ -76,6 +91,7 @@ export async function loadEventDetail(id: string): Promise<DetailLoadResult> {
     if (transmissionResult.status === "rejected") {
       warnings.push("传导假设接口不可用");
     }
+    if (impactResult.status === "rejected") warnings.push("热力矩阵接口不可用");
 
     return {
       status: "ready",
@@ -85,6 +101,7 @@ export async function loadEventDetail(id: string): Promise<DetailLoadResult> {
         evidence,
         opinions,
         transmission,
+        impactMatrix,
         availability: {
           evidence:
             evidenceResult.status === "fulfilled" ? "available" : "degraded",
@@ -100,10 +117,30 @@ export async function loadEventDetail(id: string): Promise<DetailLoadResult> {
               : transmission.length > 0
                 ? "available"
                 : "not_generated",
-          impact: "not_generated",
+          impact:
+            impactResult.status === "rejected"
+              ? "degraded"
+              : impactMatrix.length > 0
+                ? "available"
+                : "not_generated",
           report: "not_generated",
         },
       }),
+    };
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return { status: "not_found" };
+    }
+    return { status: "unavailable", reason: errorReason(error) };
+  }
+}
+
+export async function loadReportDetail(id: string): Promise<ReportLoadResult> {
+  try {
+    const report = await fetchReport(id);
+    return {
+      status: "ready",
+      data: adaptReportDetail(report),
     };
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {

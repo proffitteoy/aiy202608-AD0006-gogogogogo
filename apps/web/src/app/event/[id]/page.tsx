@@ -2,37 +2,19 @@ import { notFound } from "next/navigation";
 
 import { EvidenceDrawer } from "@/components/evidence/EvidenceDrawer";
 import { EvidenceProvider } from "@/components/evidence/EvidenceContext";
-import { Header } from "@/components/ui/Header";
-import { DegradedBanner } from "@/components/ui/DegradedBanner";
+import { ImpactMatrix } from "@/components/workbench/ImpactMatrix";
 import { OpinionCluster } from "@/components/workbench/OpinionCluster";
 import { Timeline } from "@/components/workbench/Timeline";
 import { TransmissionGraph } from "@/components/workbench/TransmissionGraph";
 import { WorkbenchGrid, WorkbenchPanel } from "@/components/workbench/WorkbenchGrid";
 import { WorkbenchHeader } from "@/components/workbench/WorkbenchHeader";
+import { DegradedBanner } from "@/components/ui/DegradedBanner";
+import { Header } from "@/components/ui/Header";
 import { loadEventDetail } from "@/lib/api/loaders";
-import type { Availability } from "@/lib/types";
 
 import styles from "./page.module.css";
 
 type Params = { id: string };
-
-function UnavailableState({
-  status,
-  label,
-}: {
-  status: Availability;
-  label: string;
-}) {
-  const degraded = status === "degraded";
-  return (
-    <div className={styles.unavailable} role="status">
-      <strong>{degraded ? `${label}接口不可用` : `${label}尚未生成`}</strong>
-      <span>
-        {degraded ? "其余可用数据继续展示。" : "当前后端没有可验证的对应产物。"}
-      </span>
-    </div>
-  );
-}
 
 export default async function EventWorkbenchPage({
   params,
@@ -41,7 +23,10 @@ export default async function EventWorkbenchPage({
 }) {
   const { id } = await params;
   const loaded = await loadEventDetail(id);
-  if (loaded.status === "not_found") notFound();
+
+  if (loaded.status === "not_found") {
+    notFound();
+  }
 
   if (loaded.status === "unavailable") {
     return (
@@ -116,10 +101,13 @@ export default async function EventWorkbenchPage({
             <WorkbenchPanel
               id="impact"
               eyebrow="IMPACT MATRIX"
-              title="影响矩阵"
-              meta="unavailable"
+              title="热力矩阵"
+              meta={`${detail.impactMatrix.length} 个对象`}
             >
-              <UnavailableState status={detail.availability.impact} label="影响矩阵" />
+              <ImpactMatrix
+                rows={detail.impactMatrix}
+                status={detail.availability.impact}
+              />
             </WorkbenchPanel>
           }
         />

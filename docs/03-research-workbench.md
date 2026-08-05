@@ -40,10 +40,10 @@
 ### 3.1 当前代码边界
 
 - `/` 已实现固定 Demo 上下文的事件总览，展示事件数量、活跃事件、已校准事件、关联原文和事件卡片。
-- `/event/{id}` 已实现事件头部、Rule 3/4 评分、文档量时间线、观点归因、传导候选、影响矩阵占位和证据抽屉。
-- 页面读取后端事件、证据、观点和传导 API；接口失败或产物缺失时显示 degraded / unavailable，不使用浏览器 mock。
-- ECharts 已用于时间线，React Flow 已用于存在传导边时的交互图；当前截图中的传导与影响矩阵为空，是后端没有可验证产物，而不是渲染故障。
-- 筛选、关注池、告警、人工修正、Snapshot、报告和导出仍是目标规格，尚未实现。
+- `/event/{id}` 已实现事件头部、Rule 3/4 评分、文档量时间线、观点归因、传导候选、热力矩阵和证据抽屉。
+- 页面读取后端事件、证据、观点、传导和影响矩阵 API；接口失败或产物缺失时显示 degraded / unavailable，不使用浏览器 mock。
+- ECharts 已用于时间线与热力矩阵，React Flow 已用于存在传导边时的交互图；当前截图中的传导与影响矩阵为空，表示后端尚无可验证产物或输入不足，而不是渲染故障。
+- 筛选、关注池、告警、人工修正和导出仍是目标规格，尚未实现；`AnalysisSnapshot` 与模板报告已接线，LLM 报告 Render 仍未实现。
 
 ## 4. 事件研究工作台：推荐布局
 
@@ -160,7 +160,7 @@
 
 ## 13. 前端接口契约示例
 
-下列是目标聚合契约。当前实现由 workspace、evidence、opinions 和 transmission 多个只读接口组合，尚未包含 Snapshot、影响矩阵与分析版本字段。
+下列是目标聚合契约。当前实现由 workspace、evidence、opinions、transmission 和 impact 多个只读接口组合，尚未包含 Snapshot 与分析版本字段。
 
 ```text
 GET /api/events/{id}/workspace

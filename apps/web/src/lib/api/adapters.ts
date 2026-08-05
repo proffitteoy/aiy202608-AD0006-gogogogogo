@@ -4,7 +4,11 @@ import type {
   EventScore,
   EventSummary,
   EvidenceItem,
+  ImpactMatrixRow,
   OpinionAttribution,
+  ResearchReport,
+  ReportEventSummary,
+  ReportSection,
   TimelinePoint,
   TransmissionEdge,
   TransmissionGraph,
@@ -16,7 +20,11 @@ import type {
   BackendEventScore,
   BackendEventSummary,
   BackendEvidenceItem,
+  BackendImpactMatrixRow,
   BackendOpinionItem,
+  BackendReportDetail,
+  BackendReportEventSummary,
+  BackendReportSectionItem,
   BackendTransmissionEdge,
   BackendWorkspaceResponse,
 } from "./backend-types";
@@ -43,7 +51,7 @@ function emotionToSentiment(emotion: string): number | null {
   return null;
 }
 
-function adaptScore(raw: BackendEventScore): EventScore {
+export function adaptScore(raw: BackendEventScore): EventScore {
   return {
     status: raw.status,
     rawScore: raw.raw_score,
@@ -149,11 +157,11 @@ function adaptOpinions(
 }
 
 function nodeType(value: string): TransmissionNodeType {
-  const normalized = value.toLowerCase();
+  const normalized = value.toLowerCase().replaceAll("_", "").replaceAll("-", "");
+  if (normalized.includes("event")) return "event";
   if (normalized.includes("sector") || normalized.includes("industry")) {
     return "sector";
   }
-  if (normalized.includes("event")) return "event";
   return "entity";
 }
 
@@ -188,7 +196,26 @@ function adaptTransmission(edges: BackendTransmissionEdge[]): TransmissionGraph 
   return { nodes: Array.from(nodes.values()), edges: adaptedEdges };
 }
 
-function adaptEvidence(items: BackendEvidenceItem[]): EvidenceItem[] {
+function adaptImpactMatrix(rows: BackendImpactMatrixRow[]): ImpactMatrixRow[] {
+  return rows.map((row) => ({
+    entityId: row.entity_id,
+    entityName: row.entity_name,
+    entityType: row.entity_type,
+    direction: row.direction,
+    impactStrength: row.impact_strength,
+    businessExposure: row.business_exposure,
+    opinionSupport: row.opinion_support,
+    factSupport: row.fact_support,
+    timeHorizon: row.time_horizon,
+    compositeConfidence: row.composite_confidence,
+    edgeCount: row.edge_count,
+    opinionCount: row.opinion_count,
+    evidenceCount: row.evidence_count,
+    evidenceIds: row.evidence_ids,
+  }));
+}
+
+export function adaptEvidence(items: BackendEvidenceItem[]): EvidenceItem[] {
   return items.map((item) => ({
     id: item.id,
     source: item.platform || item.source_type,
@@ -204,11 +231,72 @@ function adaptEvidence(items: BackendEvidenceItem[]): EvidenceItem[] {
   }));
 }
 
+function adaptReportEventSummary(raw: BackendReportEventSummary): ReportEventSummary {
+  return {
+    id: raw.id,
+    title: raw.title,
+    status: raw.status,
+    publishedAt: raw.first_published_at,
+    sourceCount: raw.source_count,
+    authoritativeSourceCount: raw.authoritative_source_count,
+    sourceBreakdown: raw.source_breakdown,
+    score: adaptScore(raw.score),
+  };
+}
+
+function adaptReportSections(items: BackendReportSectionItem[]): ReportSection[] {
+  return items.map((section) => ({
+    id: section.id,
+    title: section.title,
+    status: section.status,
+    items: section.items.map((item) => ({
+      id: item.id,
+      text: item.text,
+      evidenceIds: item.evidence_ids,
+      calculationIds: item.calculation_ids,
+    })),
+  }));
+}
+
+export function adaptReportDetail(raw: BackendReportDetail): ResearchReport {
+  return {
+    id: raw.id,
+    eventId: raw.event_id,
+    snapshotId: raw.snapshot_id,
+    format: raw.format,
+    status: raw.status,
+    title: raw.title,
+    summary: raw.summary,
+    renderEngine: raw.render_engine,
+    briefPromptVersion: raw.brief_prompt_version,
+    bodyHtml: raw.body_html,
+    evidenceIds: raw.evidence_ids,
+    calculationIds: raw.calculation_ids,
+    degradationReasons: raw.degradation_reasons,
+    createdAt: raw.created_at,
+    snapshot: {
+      id: raw.snapshot.id,
+      eventId: raw.snapshot.event_id,
+      snapshotAt: raw.snapshot.snapshot_at,
+      analysisVersion: raw.snapshot.analysis_version,
+      scoreStatus: raw.snapshot.score_status,
+      evidenceCount: raw.snapshot.evidence_count,
+      sourceCount: raw.snapshot.source_count,
+      scoringVersion: raw.snapshot.scoring_version,
+      calibrationVersion: raw.snapshot.calibration_version,
+    },
+    event: adaptReportEventSummary(raw.event),
+    sections: adaptReportSections(raw.sections),
+    evidence: adaptEvidence(raw.evidence),
+  };
+}
+
 export function adaptEventDetail(input: {
   workspace: BackendWorkspaceResponse;
   evidence: BackendEvidenceItem[];
   opinions: BackendOpinionItem[];
   transmission: BackendTransmissionEdge[];
+  impactMatrix: BackendImpactMatrixRow[];
   availability: {
     evidence: Availability;
     opinions: Availability;
@@ -217,12 +305,13 @@ export function adaptEventDetail(input: {
     report: Availability;
   };
 }): EventDetail {
-  const { workspace, evidence, opinions, transmission, availability } = input;
+  const { workspace, evidence, opinions, transmission, impactMatrix, availability } = input;
   return {
     ...adaptEventSummary(workspace.event),
     timeline: adaptTimeline(workspace, opinions),
     opinions: adaptOpinions(opinions, evidence),
     graph: adaptTransmission(transmission),
+    impactMatrix: adaptImpactMatrix(impactMatrix),
     evidence: adaptEvidence(evidence),
     availability,
   };

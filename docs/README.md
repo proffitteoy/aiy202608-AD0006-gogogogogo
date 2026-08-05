@@ -191,11 +191,12 @@ Agent 只能解释冻结的 Rule 3/4 结果，不能提出或写入任何覆盖 
 | GET /api/events/{id}/evidence | 证据筛选 | 已实现 |
 | GET /api/events/{id}/opinions | 观点归因只读查询 | 已实现 |
 | GET /api/events/{id}/transmission | 传导候选只读查询 | 已实现 |
+| POST /api/reports | 冻结当前事件的 snapshot 并生成 HTML 报告 | 已实现（`template-render-v1`，不依赖 LLM） |
+| GET /api/reports/{id} | 读取冻结报告与引用证据 | 已实现 |
 | POST /api/events/{id}/review | 人工确认/拒绝/备注 | 仅设计，未实现 |
 | POST /api/events/{id}/reanalyze | 创建新分析版本 | 仅设计，未实现 |
 | GET /api/entities/{id}/exposure | 实体风险暴露 | 仅设计，未实现 |
 | POST /api/alerts/rules | 配置告警规则 | 仅设计，未实现 |
-| POST /api/reports | 基于 snapshot 生成报告 | 仅设计，未实现 |
 
 ## 14. 数据与模型可追溯要求
 

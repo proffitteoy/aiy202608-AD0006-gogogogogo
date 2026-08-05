@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { ScoreBadge } from "@/components/overview/ScoreBadge";
+import { ReportLaunchButton } from "@/components/workbench/ReportLaunchButton";
 import {
   formatDateTime,
   formatEventStatus,
@@ -81,14 +82,7 @@ export function WorkbenchHeader({ detail, sourceCount }: Props) {
           </div>
         </div>
 
-        <button
-          type="button"
-          className={styles.reportBtn}
-          disabled
-          title="AnalysisSnapshot 与 Agent 2 Render 尚未接入"
-        >
-          生成报告
-        </button>
+        <ReportLaunchButton eventId={detail.id} />
       </div>
     </header>
   );

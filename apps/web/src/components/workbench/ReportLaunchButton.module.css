@@ -1,0 +1,41 @@
+.action {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.button {
+  padding: var(--space-2) var(--space-4);
+  color: var(--surface-0);
+  font-weight: 600;
+  background: var(--accent);
+  border-radius: 4px;
+  transition:
+    background var(--dur-fast) var(--ease-out-expo),
+    transform var(--dur-fast) var(--ease-out-expo);
+}
+
+.button:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+.button:active {
+  transform: translateY(0);
+}
+
+.button:disabled {
+  color: var(--text-tertiary);
+  background: var(--surface-3);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.error {
+  max-width: 220px;
+  color: var(--risk-high);
+  font-size: var(--text-caption);
+  line-height: 1.5;
+  text-align: right;
+}

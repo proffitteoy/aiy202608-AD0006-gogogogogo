@@ -29,6 +29,17 @@ class Settings(BaseSettings):
     ingestion_api_token: SecretStr = SecretStr("")
     ingestion_tenant_id: UUID = UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
     ingestion_allowed_providers: str = ""
+    live_pull_api_base_url: str = "http://localhost:8000"
+    live_pull_request_timeout_seconds: float = 10.0
+    live_pull_license_scope: str = "internal_research"
+    live_pull_tencent_symbols: str = "600519,000001,510300"
+    live_pull_tencent_stream: str = "a-share-live"
+    live_pull_cls_page_size: int = 20
+    live_pull_cls_stream: str = "cls-telegraph"
+    live_pull_snowball_cookie: SecretStr = SecretStr("")
+    live_pull_snowball_scope: str = "day"
+    live_pull_snowball_count: int = 20
+    live_pull_snowball_stream: str = "xueqiu-hot-posts"
     llm_provider: str = "openai"
     llm_model: str = "gpt-4o-mini"
     llm_small_model: str = "gpt-4o-mini"

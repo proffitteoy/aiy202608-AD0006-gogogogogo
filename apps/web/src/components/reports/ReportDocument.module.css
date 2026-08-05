@@ -1,0 +1,124 @@
+.article {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.summaryCard {
+  padding: var(--space-4);
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+}
+
+.summaryLabel {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text-tertiary);
+  font-size: var(--text-caption);
+}
+
+.summaryValue {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-body-l);
+  font-weight: 600;
+}
+
+.section {
+  padding: var(--space-5);
+  background: var(--surface-0);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+}
+
+.sectionHead {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--text-h4);
+  font-weight: 600;
+}
+
+.status {
+  padding: 4px 8px;
+  color: var(--text-secondary);
+  font-size: var(--text-caption);
+  background: var(--surface-2);
+  border-radius: 999px;
+}
+
+.list {
+  display: grid;
+  gap: var(--space-3);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.item {
+  padding: var(--space-4);
+  background: var(--surface-1);
+  border-radius: 16px;
+}
+
+.text {
+  margin: 0;
+  color: var(--text-primary);
+  line-height: 1.7;
+}
+
+.refs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin-top: var(--space-3);
+}
+
+.evidenceBtn {
+  padding: 6px 10px;
+  color: var(--accent);
+  font-size: var(--text-body-s);
+  background: color-mix(in oklch, var(--accent) 12%, var(--surface-0));
+  border: 1px solid color-mix(in oklch, var(--accent) 28%, transparent);
+  border-radius: 999px;
+}
+
+.calcId {
+  padding: 6px 10px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  background: var(--surface-0);
+  border-radius: 999px;
+}
+
+@media (max-width: 900px) {
+  .summaryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .sectionHead {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

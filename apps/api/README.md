@@ -20,11 +20,29 @@ Sentence Transformers 通过可选的惰性适配器接入；默认 API 安装�
 Bearer 服务账户写入：服务端决定 tenant 和 provider scope，按来源 ID 幂等保存 `RawDocument`，
 每次投递追加 `IngestionReceipt`。首次写入会同步尽力执行确定性 Rule 1/2、Event、Metric 和
 Rule 3/4 持久化；该阶段失败会回滚并记录日志，但接入记录仍保留。响应目前固定为
-`pending_enrichment`，尚无处理状态查询、可靠重试或后台调度。Agent 1/2 也尚未实现。
+`pending_enrichment`，尚无处理状态查询、可靠重试或后台调度。当前已补上传导假设生成入口，
+直接复用 `RISKTRACE_LLM_*` 配置调用 OpenAI 兼容接口；但 Agent 1 事件标签、完整 Agent 2
+流水线、Snapshot 和报告仍未实现。
+
+`src/risktrace/ingestion/adapters` 现已补上最小真实来源适配层：基于上游开源实现提取了
+腾讯公开行情、财联社公开电报和雪球热帖客户端/适配器，统一产出严格 `SourceRecord`。
+它们当前仍是库级能力，尚未接入调度、checkpoint 推进或 API 路由。
+
+当前还新增了一个真实拉取 CLI 入口，会抓取后直接 `POST /api/v1/ingestion/items`：
+
+```powershell
+uv run --project apps/api python -m risktrace.cli pull-live --adapter tencent-quote
+uv run --project apps/api python -m risktrace.cli pull-live --adapter cailianpress-telegraph
+uv run --project apps/api python -m risktrace.cli pull-live --adapter xueqiu-hot-posts
+```
+
+运行该命令前，除了数据库连接外，还要确保本地 API 服务已启动，并且
+`RISKTRACE_INGESTION_ALLOWED_PROVIDERS` 至少放行对应 provider；雪球来源还需要
+`RISKTRACE_LIVE_PULL_SNOWBALL_COOKIE`。
 
 Sentence Transformers 的上游实现保存在 `vendor/`，`uv.lock` 使用本地可选路径源；默认安装和
-容器构建不会安装该可选依赖。当前没有 Celery worker 或 Agent 1/2 运行调用链，因此 Celery、
-Pydantic AI Slim 与 Pydantic Graph 未保留在依赖或 vendor 目录中。安装和容器构建不依赖根目录的
+容器构建不会安装该可选依赖。当前没有 Celery worker，也没有完整 Agent 编排流水线；传导假设生成
+直接复用内置 `httpx` 调 OpenAI 兼容 Chat Completions，不依赖额外 Agent 框架或根目录的
 `第三方库`。
 
 从仓库根目录运行：

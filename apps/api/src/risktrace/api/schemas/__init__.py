@@ -10,6 +10,11 @@ from risktrace.api.schemas.events import (
     TimelineBucket,
     WorkspaceResponse,
 )
+from risktrace.api.schemas.reports import (
+    ReportCreateRequest,
+    ReportCreateResponse,
+    ReportDetailResponse,
+)
 
 __all__ = [
     "DocumentDetail",
@@ -21,6 +26,9 @@ __all__ = [
     "LinkedDocument",
     "PaginatedResponse",
     "PaginationParams",
+    "ReportCreateRequest",
+    "ReportCreateResponse",
+    "ReportDetailResponse",
     "SourceTypeEnum",
     "TimelineBucket",
     "WorkspaceResponse",
