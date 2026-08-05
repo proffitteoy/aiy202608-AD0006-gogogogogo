@@ -72,6 +72,9 @@ def _build_system_prompt() -> str:
         "- horizon 只能是 immediate、short、medium、long。\n"
         "- from_node_type / to_node_type 只能是 entity、sector、event。\n"
         "- 最多输出 8 条边，优先保留置信度最高、证据最直接的候选。\n"
+        "- 根值必须是 JSON 对象，且结构严格为 {\"edges\": [...]}。\n"
+        "- edges 中每项只能使用 from_node_type、from_node_id、to_node_type、"
+        "to_node_id、mechanism、direction、horizon、evidence_doc_ids、confidence 字段。\n"
         "- 只输出严格 JSON，不要附带 Markdown、解释或代码块。"
     )
 
@@ -176,7 +179,7 @@ class TransmissionGraphAgent:
         node_lines: str,
         doc_text: str,
     ) -> TransmissionOutput:
-        request_body = {
+        request_body: dict[str, Any] = {
             "model": self.settings.llm_model,
             "messages": [
                 {"role": "system", "content": _build_system_prompt()},
@@ -196,6 +199,9 @@ class TransmissionGraphAgent:
                 },
             },
         }
+        if self.settings.llm_provider.strip().lower() == "deepseek":
+            request_body["response_format"] = {"type": "json_object"}
+            request_body["thinking"] = {"type": "disabled"}
 
         try:
             async with self._client() as client:

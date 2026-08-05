@@ -89,3 +89,47 @@ async def test_transmission_agent_calls_openai_compatible_chat_completion(
     assert body["response_format"]["type"] == "json_schema"
     assert body["messages"][0]["role"] == "system"
     assert body["messages"][1]["role"] == "user"
+
+
+@pytest.mark.asyncio
+async def test_transmission_agent_uses_deepseek_compatible_json_mode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    monkeypatch.setattr(
+        "risktrace.agents.transmission.get_settings",
+        lambda: SimpleNamespace(
+            llm_provider="deepseek",
+            llm_model="deepseek-v4-flash",
+            llm_api_key="test-key",
+            llm_base_url="https://api.deepseek.com",
+            llm_temperature=0.3,
+            llm_max_tokens=256,
+        ),
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["body"] = json.loads(request.content.decode("utf-8"))
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": '{"edges": []}'}}]},
+        )
+
+    agent = TransmissionGraphAgent(
+        object(),  # type: ignore[arg-type]
+        transport=httpx.MockTransport(handler),
+    )
+
+    output = await agent._run_llm(
+        event_title="测试事件",
+        node_lines="",
+        doc_text="测试材料",
+    )
+
+    assert output.edges == []
+    body = captured["body"]
+    assert isinstance(body, dict)
+    assert body["response_format"] == {"type": "json_object"}
+    assert body["thinking"] == {"type": "disabled"}
+    assert '{"edges": [...]}' in body["messages"][0]["content"]
