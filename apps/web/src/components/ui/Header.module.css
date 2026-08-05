@@ -6,8 +6,7 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--space-density-2) var(--space-5);
-  background: color-mix(in oklch, var(--surface-0) 94%, transparent);
-  backdrop-filter: blur(12px);
+  background: var(--surface-1);
   border-bottom: 1px solid var(--border-subtle);
 }
 

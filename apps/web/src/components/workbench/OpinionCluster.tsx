@@ -84,7 +84,7 @@ export function OpinionCluster({ items, status }: Props) {
 
   return (
     <ul className={styles.list}>
-      {items.map((item) => {
+      {items.map((item, index) => {
         const state = getState(item.id);
         const isIncluded = state.decision === "include";
         const isExcluded = state.decision === "exclude";
@@ -100,7 +100,7 @@ export function OpinionCluster({ items, status }: Props) {
 
             <div className={styles.head}>
               <span className={styles.tag} data-numeric>
-                #{item.id.slice(0, 8)}
+                {String(index + 1).padStart(2, "0")}
               </span>
               <button
                 type="button"

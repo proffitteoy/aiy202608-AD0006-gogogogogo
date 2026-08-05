@@ -30,14 +30,14 @@ export default async function EventWorkbenchPage({
 
   if (loaded.status === "unavailable") {
     return (
-      <>
+      <div data-theme="dark" className="themeShell">
         <Header />
         <main className={styles.errorPage}>
           <p className="eyebrow">EVENT WORKSPACE</p>
           <h1>事件工作台暂不可用</h1>
           <p>{loaded.reason}，页面未回退到本地样例。</p>
         </main>
-      </>
+      </div>
     );
   }
 
@@ -51,15 +51,16 @@ export default async function EventWorkbenchPage({
   const warning = [...loaded.warnings, ...(scoreWarning ? [scoreWarning] : [])].join("；");
 
   return (
-    <EvidenceProvider evidence={detail.evidence}>
-      <div className={styles.layout}>
-        <WorkbenchHeader detail={detail} sourceCount={detail.evidence.length} />
+    <div data-theme="dark" className="themeShell">
+      <EvidenceProvider evidence={detail.evidence}>
+        <div className={styles.layout}>
+          <WorkbenchHeader detail={detail} sourceCount={detail.evidence.length} />
 
-        {warning ? (
-          <DegradedBanner message="部分研究产物不可用" hint={warning} />
-        ) : null}
+          {warning ? (
+            <DegradedBanner message="部分研究产物不可用" hint={warning} />
+          ) : null}
 
-        <WorkbenchGrid
+          <WorkbenchGrid
           timeline={
             <WorkbenchPanel
               id="timeline"
@@ -111,9 +112,10 @@ export default async function EventWorkbenchPage({
             </WorkbenchPanel>
           }
         />
-      </div>
+        </div>
 
-      <EvidenceDrawer />
-    </EvidenceProvider>
+        <EvidenceDrawer />
+      </EvidenceProvider>
+    </div>
   );
 }

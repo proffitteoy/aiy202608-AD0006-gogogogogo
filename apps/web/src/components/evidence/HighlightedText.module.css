@@ -1,7 +1,8 @@
 .mark {
-  padding: 0 2px;
+  padding: 0 3px;
+  margin: 0 1px;
   color: var(--text-primary);
-  background: oklch(78% 0.17 85 / 0.25);
+  background: oklch(78% 0.17 85 / 0.32);
   border-radius: 2px;
-  border-bottom: 1px solid oklch(78% 0.17 85 / 0.6);
+  border-bottom: 1px solid oklch(78% 0.17 85 / 0.7);
 }

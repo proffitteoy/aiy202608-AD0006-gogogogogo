@@ -4,7 +4,13 @@ import { useCallback, useEffect, useRef } from "react";
 
 import { useEvidence } from "@/components/evidence/EvidenceContext";
 import { useResize } from "@/hooks/use-resize";
-import { baseChartOption, chartPalette } from "@/lib/chart-theme";
+import { useIsDark } from "@/hooks/use-theme";
+import {
+  baseChartOption as baseLightOption,
+  baseDarkChartOption,
+  chartPalette as lightPalette,
+  darkChartPalette,
+} from "@/lib/chart-theme";
 import type { TimelinePoint } from "@/lib/types";
 
 import styles from "./Timeline.module.css";
@@ -28,6 +34,9 @@ function TimelineChart({ points }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<{ resize: () => void; dispose: () => void } | null>(null);
   const { open } = useEvidence();
+  const isDark = useIsDark(containerRef);
+  const palette = isDark ? darkChartPalette : lightPalette;
+  const base = isDark ? baseDarkChartOption : baseLightOption;
 
   const onResize = useCallback(() => chartRef.current?.resize(), []);
   useResize(containerRef, onResize);
@@ -52,8 +61,8 @@ function TimelineChart({ points }: Props) {
           name: point.label,
           coord: [point.timestamp, point.documentCount],
           evidenceIds: point.evidenceIds,
-          itemStyle: { color: chartPalette.accent },
-          label: { color: chartPalette.textPrimary, fontSize: 12 },
+          itemStyle: { color: palette.accent },
+          label: { color: palette.textPrimary, fontSize: 12 },
         }));
 
       const series: unknown[] = [
@@ -66,7 +75,7 @@ function TimelineChart({ points }: Props) {
           showSymbol: true,
           sampling: "lttb",
           lineStyle: {
-            color: chartPalette.viz[0],
+            color: palette.viz[0],
             width: 2.2,
             shadowColor: "rgba(38, 83, 201, 0.25)",
             shadowBlur: 6,
@@ -74,14 +83,14 @@ function TimelineChart({ points }: Props) {
           },
           itemStyle: {
             color: "#fff",
-            borderColor: chartPalette.viz[0],
+            borderColor: palette.viz[0],
             borderWidth: 2,
           },
           emphasis: {
             focus: "series",
             scale: 1.6,
             itemStyle: {
-              color: chartPalette.viz[0],
+              color: palette.viz[0],
               borderColor: "#fff",
               borderWidth: 2,
               shadowColor: "rgba(38, 83, 201, 0.55)",
@@ -113,7 +122,7 @@ function TimelineChart({ points }: Props) {
           markPoint: {
             symbol: "pin",
             symbolSize: 34,
-            itemStyle: { color: chartPalette.accent, opacity: 0.92 },
+            itemStyle: { color: palette.accent, opacity: 0.92 },
             emphasis: {
               scale: true,
               itemStyle: {
@@ -136,8 +145,8 @@ function TimelineChart({ points }: Props) {
           symbol: "emptyCircle",
           symbolSize: 5,
           connectNulls: false,
-          lineStyle: { color: chartPalette.viz[4], width: 1.4, type: "dashed" },
-          itemStyle: { color: chartPalette.viz[4] },
+          lineStyle: { color: palette.viz[4], width: 1.4, type: "dashed" },
+          itemStyle: { color: palette.viz[4] },
           emphasis: {
             focus: "series",
             scale: 1.6,
@@ -184,20 +193,20 @@ function TimelineChart({ points }: Props) {
                 ? (value as number).toFixed(2)
                 : String(value);
             return `<div style="display:flex;justify-content:space-between;gap:14px;margin-top:4px;">
-              <span style="color:#545963;">${r.marker ?? ""}${r.seriesName}</span>
-              <strong style="font-variant-numeric:tabular-nums;color:#232630;">${display}</strong>
+              <span style="color:${palette.textSecondary};">${r.marker ?? ""}${r.seriesName}</span>
+              <strong style="font-variant-numeric:tabular-nums;color:${palette.textPrimary};">${display}</strong>
             </div>`;
           })
           .join("");
         const label = point?.label
-          ? `<div style="margin-top:6px;padding-top:6px;border-top:1px dashed #d5d7dc;color:#545963;font-size:12px;">锚点 · ${point.label}</div>`
+          ? `<div style="margin-top:6px;padding-top:6px;border-top:1px dashed ${palette.gridLine};color:${palette.textSecondary};font-size:12px;">锚点 · ${point.label}</div>`
           : "";
         const clickHint =
           point && point.evidenceIds.length > 0
-            ? `<div style="margin-top:6px;color:#83878f;font-size:11px;letter-spacing:0.02em;">点击查看 ${point.evidenceIds.length} 条证据</div>`
+            ? `<div style="margin-top:6px;color:${palette.textTertiary};font-size:11px;letter-spacing:0.02em;">点击查看 ${point.evidenceIds.length} 条证据</div>`
             : "";
         return `<div style="min-width:180px;font-size:12px;">
-          <div style="color:#232630;font-weight:600;letter-spacing:0.02em;">${timeStr}</div>
+          <div style="color:${palette.textPrimary};font-weight:600;letter-spacing:0.02em;">${timeStr}</div>
           ${rows}
           ${label}
           ${clickHint}
@@ -205,28 +214,28 @@ function TimelineChart({ points }: Props) {
       };
 
       chart.setOption({
-        ...baseChartOption,
+        ...base,
         grid: { top: 44, right: 28, bottom: 40, left: 52, containLabel: true },
         tooltip: {
-          ...baseChartOption.tooltip,
+          ...base.tooltip,
           trigger: "axis",
           axisPointer: {
             type: "cross",
             snap: true,
             label: {
-              backgroundColor: chartPalette.textPrimary,
+              backgroundColor: palette.textPrimary,
               color: "#fff",
               fontSize: 11,
               padding: [4, 6],
               borderRadius: 3,
             },
             lineStyle: {
-              color: chartPalette.textTertiary,
+              color: palette.textTertiary,
               type: "dashed",
               width: 1,
             },
             crossStyle: {
-              color: chartPalette.textTertiary,
+              color: palette.textTertiary,
               type: "dashed",
               width: 1,
             },
@@ -234,26 +243,26 @@ function TimelineChart({ points }: Props) {
           formatter: tooltipFormatter,
         },
         xAxis: {
-          ...baseChartOption.xAxis,
+          ...base.xAxis,
           type: "time",
           boundaryGap: false,
-          axisLabel: { ...baseChartOption.xAxis.axisLabel, formatter: "{HH}:{mm}" },
+          axisLabel: { ...base.xAxis.axisLabel, formatter: "{HH}:{mm}" },
           splitLine: {
             show: true,
-            lineStyle: { color: chartPalette.gridLine, type: "dashed", opacity: 0.35 },
+            lineStyle: { color: palette.gridLine, type: "dashed", opacity: 0.35 },
           },
         },
         yAxis: [
           {
-            ...baseChartOption.yAxis,
+            ...base.yAxis,
             min: 0,
             minInterval: 1,
             splitLine: {
-              lineStyle: { color: chartPalette.gridLine, type: "dashed", opacity: 0.5 },
+              lineStyle: { color: palette.gridLine, type: "dashed", opacity: 0.5 },
             },
           },
           {
-            ...baseChartOption.yAxis,
+            ...base.yAxis,
             show: hasSentiment,
             min: -1,
             max: 1,
@@ -289,7 +298,7 @@ function TimelineChart({ points }: Props) {
       chartRef.current?.dispose();
       chartRef.current = null;
     };
-  }, [points, open]);
+  }, [points, open, palette, base]);
 
   const hasSentiment = points.some((point) => point.sentiment !== null);
   return (
@@ -298,7 +307,7 @@ function TimelineChart({ points }: Props) {
         <span className={styles.legendItem}>
           <span
             className={styles.legendSwatch}
-            style={{ background: chartPalette.viz[0] }}
+            style={{ background: palette.viz[0] }}
           />
           事件量
         </span>
@@ -306,7 +315,7 @@ function TimelineChart({ points }: Props) {
           <span className={styles.legendItem}>
             <span
               className={`${styles.legendSwatch} ${styles.legendSwatchDashed}`}
-              style={{ color: chartPalette.viz[4] }}
+              style={{ color: palette.viz[4] }}
             />
             观点情绪
           </span>

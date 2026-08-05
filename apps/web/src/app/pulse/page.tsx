@@ -11,7 +11,7 @@ export default async function PulsePage() {
   const pulse = derivePulse(events);
 
   return (
-    <>
+    <div data-theme="dark" className="themeShell">
       <Header
         activeEventCount={pulse.activeEvents}
         scoredEventCount={pulse.scoredEvents}
@@ -25,6 +25,6 @@ export default async function PulsePage() {
           <OverviewStream events={events} />
         </section>
       </main>
-    </>
+    </div>
   );
 }

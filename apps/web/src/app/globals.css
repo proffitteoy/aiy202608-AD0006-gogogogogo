@@ -94,6 +94,67 @@
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 }
 
+/* =============================================================
+ * Dark scope — 只作用于挂了 data-theme="dark" 的容器（pulse 与事件详情页）
+ * 通过覆盖同一套变量翻转所有下游组件，无需逐个改。
+ * 灵感：Bloomberg / Interactive Brokers 终端。
+ * ============================================================= */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* 表面层：底更深、卡片更浅，形成"背景 < 卡片 < 悬浮"的层次 */
+  --surface-0: oklch(15% 0.008 250);   /* 页面底：近黑但带一丝冷蓝 */
+  --surface-1: oklch(19% 0.01 250);    /* 卡片默认 */
+  --surface-2: oklch(24% 0.012 250);   /* hover / 内嵌卡片 */
+  --surface-3: oklch(30% 0.014 250);   /* 弹窗 / stat 卡片 */
+  --border-subtle: oklch(30% 0.014 250);
+  --border-strong: oklch(45% 0.018 250);
+
+  /* 文字层：亮白递减到冷灰 */
+  --text-primary: oklch(96% 0.005 250);
+  --text-secondary: oklch(78% 0.008 250);
+  --text-tertiary: oklch(58% 0.012 250);
+  --text-inverse: oklch(15% 0 0);
+
+  /* 风险语义色：暗底下拉高明度，暗底下饱和感 */
+  --risk-high: oklch(70% 0.22 25);
+  --risk-mid: oklch(75% 0.16 65);
+  --risk-low: oklch(72% 0.15 155);
+  --risk-high-bg: oklch(70% 0.22 25 / 0.14);
+  --risk-mid-bg: oklch(75% 0.16 65 / 0.14);
+  --risk-low-bg: oklch(72% 0.15 155 / 0.12);
+
+  /* 数据可视化：暗底下提亮 */
+  --viz-1: oklch(68% 0.18 245);
+  --viz-2: oklch(70% 0.2 320);
+  --viz-3: oklch(75% 0.16 55);
+  --viz-4: oklch(70% 0.14 195);
+  --viz-5: oklch(72% 0.2 15);
+  --viz-6: oklch(72% 0.13 140);
+  --viz-7: oklch(66% 0.19 275);
+  --viz-8: oklch(72% 0.15 100);
+
+  /* 强调色：暗底下用亮蓝 */
+  --accent: oklch(72% 0.18 245);
+  --accent-hover: oklch(80% 0.18 245);
+
+  /* 阴影：暗底下真实投影不明显，改为主色轻微发光 + 深色阴影 */
+  --shadow-sm: 0 1px 2px oklch(0% 0 0 / 0.4);
+  --shadow-md:
+    0 4px 12px oklch(0% 0 0 / 0.5),
+    0 1px 3px oklch(0% 0 0 / 0.4);
+  --shadow-lg:
+    0 12px 32px oklch(0% 0 0 / 0.6),
+    0 4px 8px oklch(0% 0 0 / 0.4);
+}
+
+/* dark scope wrapper：撑满视口，让 wrapper 内部的 --surface-0 作为整页底色 */
+.themeShell {
+  min-height: 100vh;
+  background: var(--surface-0);
+  color: var(--text-primary);
+}
+
 * {
   box-sizing: border-box;
 }

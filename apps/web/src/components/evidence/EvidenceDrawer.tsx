@@ -35,7 +35,7 @@ export function EvidenceDrawer() {
     (pickedId ? items.find((item) => item.id === pickedId) : undefined) ?? items[0];
 
   return createPortal(
-    <>
+    <div data-theme="dark">
       <div className={styles.backdrop} onClick={close} aria-hidden="true" />
       <aside
         className={styles.drawer}
@@ -44,11 +44,12 @@ export function EvidenceDrawer() {
         aria-label="证据抽屉"
       >
         <header className={styles.head}>
-          <div>
-            <p className="eyebrow">证据</p>
-            <p className={styles.headMeta} data-numeric>
-              {items.length} 篇原文
-            </p>
+          <div className={styles.headBrand}>
+            <span className={styles.headEyebrow}>EVIDENCE</span>
+            <span className={styles.headMeta} data-numeric>
+              {items.length}
+              <em className={styles.headMetaUnit}>篇原文</em>
+            </span>
           </div>
           <button type="button" className={styles.close} onClick={close} aria-label="关闭">
             ×
@@ -133,7 +134,7 @@ export function EvidenceDrawer() {
           </article>
         </div>
       </aside>
-    </>,
+    </div>,
     document.body,
   );
 }

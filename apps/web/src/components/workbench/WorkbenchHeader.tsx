@@ -3,9 +3,7 @@ import Link from "next/link";
 import { ScoreBadge } from "@/components/overview/ScoreBadge";
 import { ReportLaunchButton } from "@/components/workbench/ReportLaunchButton";
 import {
-  formatDateTime,
   formatEventStatus,
-  formatRelative,
   formatScore,
   formatScoreInterval,
   formatTime,
@@ -34,15 +32,6 @@ export function WorkbenchHeader({ detail, sourceCount }: Props) {
             <span className={styles.time} data-numeric>
               {formatTime(detail.publishedAt)}
             </span>
-            {detail.freshness?.updatedAt ? (
-              <span
-                className={styles.updated}
-                title={formatDateTime(detail.freshness.updatedAt)}
-              >
-                最后更新{" "}
-                <span data-numeric>{formatRelative(detail.freshness.updatedAt)}</span>
-              </span>
-            ) : null}
           </div>
           <h1 className={styles.title}>{detail.title}</h1>
         </div>
