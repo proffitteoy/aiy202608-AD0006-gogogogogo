@@ -1,0 +1,129 @@
+.bar {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.left {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+}
+
+.search {
+  position: relative;
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  width: 100%;
+  max-width: 360px;
+  padding: 5px var(--space-3);
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  transition:
+    background var(--dur-fast) var(--ease-out-expo),
+    border-color var(--dur-fast) var(--ease-out-expo),
+    box-shadow var(--dur-fast) var(--ease-out-expo);
+}
+
+.search:focus-within {
+  background: var(--surface-1);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 12%, transparent);
+}
+
+.searchIcon {
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1;
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  background: transparent;
+  border: 0;
+  outline: 0;
+}
+
+.search input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.searchClear {
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1;
+  transition: color var(--dur-fast) var(--ease-out-expo);
+}
+
+.searchClear:hover {
+  color: var(--risk-high);
+}
+
+.chipRow {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--surface-2);
+  border-radius: 999px;
+}
+
+.chip {
+  padding: 3px 10px;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  transition:
+    background var(--dur-fast) var(--ease-out-expo),
+    color var(--dur-fast) var(--ease-out-expo);
+}
+
+.chip:hover {
+  color: var(--text-primary);
+}
+
+.chip[data-active="true"] {
+  color: var(--text-primary);
+  font-weight: 600;
+  background: var(--surface-1);
+  box-shadow: 0 1px 2px oklch(20% 0.02 250 / 0.08);
+}
+
+.right {
+  /* 现在事件计数并入 streamHint，右侧留空 —— 保留 class 以便未来扩展 */
+  display: none;
+}
+
+@media (max-width: 780px) {
+  .bar {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+  .left {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .search {
+    width: auto;
+  }
+  .chipRow {
+    justify-content: center;
+  }
+}

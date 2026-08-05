@@ -78,28 +78,44 @@
 }
 
 .node {
-  padding: var(--space-2) var(--space-3);
-  min-width: 96px;
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  grid-template-rows: auto auto;
+  grid-template-areas:
+    "icon tag"
+    "icon label";
+  gap: 0 var(--space-2);
+  align-items: center;
+  padding: 6px var(--space-3);
+  min-width: 180px;
   color: var(--text-primary);
-  font-size: var(--text-body-s);
-  text-align: center;
-  background: var(--surface-2);
+  font-size: 13px;
+  text-align: left;
+  background: var(--surface-1);
   border: 1px solid;
-  border-radius: 4px;
+  border-radius: 6px;
   box-shadow:
     0 1px 2px oklch(20% 0.02 250 / 0.06),
-    0 2px 8px oklch(20% 0.02 250 / 0.08);
+    0 4px 12px oklch(20% 0.02 250 / 0.08);
   transition:
     opacity var(--dur-fast) var(--ease-out-expo),
     transform var(--dur-fast) var(--ease-out-expo),
-    box-shadow var(--dur-fast) var(--ease-out-expo);
+    box-shadow var(--dur-fast) var(--ease-out-expo),
+    border-color var(--dur-fast) var(--ease-out-expo);
   animation: nodePop var(--dur-slow) var(--ease-out-back) backwards;
+}
+
+.node:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 2px 4px oklch(20% 0.02 250 / 0.08),
+    0 10px 24px oklch(20% 0.02 250 / 0.12);
 }
 
 @keyframes nodePop {
   from {
     opacity: 0;
-    transform: scale(0.6);
+    transform: scale(0.7);
   }
   to {
     opacity: 1;
@@ -112,26 +128,58 @@
 }
 
 .nodeHighlighted {
-  transform: scale(1.06);
+  transform: scale(1.05);
   box-shadow:
     0 0 0 2px color-mix(in oklch, var(--accent) 60%, transparent),
     0 12px 28px oklch(20% 0.02 250 / 0.15),
     0 4px 8px oklch(20% 0.02 250 / 0.1);
 }
 
-.nodeTag {
-  display: block;
-  color: var(--text-tertiary);
+.nodeIcon {
+  grid-area: icon;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 16px;
+  line-height: 1;
+  background: color-mix(in oklch, currentColor 8%, transparent);
+  border-radius: 6px;
+}
+
+.nodeBody {
+  grid-area: label;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.nodeTag {
+  grid-area: tag;
+  align-self: end;
+  color: var(--text-tertiary);
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  margin-bottom: 2px;
+  line-height: 1;
 }
 
 .nodeLabel {
-  display: block;
-  font-weight: 500;
+  align-self: start;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .handle {

@@ -32,13 +32,21 @@ function useExpand(): ExpandContextValue {
 
 type PanelProps = {
   id: PanelId;
-  eyebrow: string;
+  /** @deprecated kept for prop compatibility; no longer rendered */
+  eyebrow?: string;
   title: string;
   meta?: string;
   children: ReactNode;
 };
 
-export function WorkbenchPanel({ id, eyebrow, title, meta, children }: PanelProps) {
+const PANEL_ICONS: Record<PanelId, string> = {
+  timeline: "◔",
+  clusters: "◈",
+  graph: "⇋",
+  impact: "▦",
+};
+
+export function WorkbenchPanel({ id, title, meta, children }: PanelProps) {
   const { expandedId, toggle } = useExpand();
   const expanded = expandedId === id;
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -50,10 +58,12 @@ export function WorkbenchPanel({ id, eyebrow, title, meta, children }: PanelProp
   return (
     <section className={styles.panel}>
       <header className={styles.panelHead}>
-        <div>
-          <p className="eyebrow">{eyebrow}</p>
-          <h2 className={styles.panelTitle}>{title}</h2>
-        </div>
+        <h2 className={styles.panelTitle}>
+          <span className={styles.panelIcon} aria-hidden="true">
+            {PANEL_ICONS[id]}
+          </span>
+          {title}
+        </h2>
         <div className={styles.panelActions}>
           {meta ? <span className={styles.meta}>{meta}</span> : null}
           <button

@@ -49,9 +49,9 @@
 .degradedTitle {
   margin: 0 0 var(--space-1);
   color: var(--text-primary);
-  font-family: var(--font-serif);
-  font-size: var(--text-body-l);
-  font-weight: 500;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .degradedHint {
@@ -64,12 +64,30 @@
 .item {
   position: relative;
   padding: var(--space-3) var(--space-4) var(--space-3) calc(var(--space-4) + 4px);
-  background: var(--surface-2);
+  background: var(--surface-1);
   border: 1px solid var(--border-subtle);
-  border-radius: 4px;
+  border-radius: 5px;
   transition:
     opacity var(--dur-normal),
-    border-color var(--dur-fast);
+    border-color var(--dur-fast) var(--ease-out-expo),
+    background var(--dur-fast) var(--ease-out-expo),
+    box-shadow var(--dur-fast) var(--ease-out-expo),
+    transform var(--dur-fast) var(--ease-out-expo);
+}
+
+.item:hover {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+  transform: translateX(2px);
+}
+
+.item:hover .rail {
+  background: var(--accent);
+}
+
+.item:hover .supportFill {
+  filter: brightness(1.08);
 }
 
 .rail {
@@ -80,19 +98,23 @@
   width: 3px;
   background: var(--border-strong);
   border-radius: 2px;
-  transition: background var(--dur-fast);
+  transition: background var(--dur-fast) var(--ease-out-expo);
 }
 
-.confirmed .rail {
+.rail[data-tone="include"] {
   background: var(--risk-low);
 }
 
-.rejected {
-  opacity: 0.4;
+.rail[data-tone="exclude"] {
+  background: var(--risk-high);
 }
 
-.rejected .excerpt,
-.rejected .label {
+.excluded {
+  opacity: 0.55;
+}
+
+.excluded .excerpt,
+.excluded .label {
   text-decoration: line-through;
   text-decoration-color: var(--text-tertiary);
 }
@@ -115,11 +137,12 @@
   flex: 1;
   padding: 0;
   color: var(--text-primary);
-  font-family: var(--font-serif);
-  font-size: var(--text-body-l);
-  font-weight: 500;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
   text-align: left;
-  line-height: var(--leading-tight);
+  line-height: 1.4;
   transition: color var(--dur-fast);
 }
 
@@ -207,23 +230,53 @@
 }
 
 .actions {
+  display: inline-flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.noteDisplay {
   display: flex;
-  gap: var(--space-2);
+  gap: 8px;
+  align-items: baseline;
+  margin: var(--space-3) 0 0;
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.5;
+  background: color-mix(in oklch, var(--accent) 4%, transparent);
+  border-left: 2px solid var(--accent);
+  border-radius: 3px;
+}
+
+.noteDisplayLabel {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  color: var(--accent);
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  background: color-mix(in oklch, var(--accent) 12%, transparent);
+  border-radius: 3px;
 }
 
 .confirmBtn,
 .rejectBtn {
-  padding: var(--space-1) var(--space-2);
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
+  padding: 3px 10px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
   border: 1px solid var(--border-subtle);
   border-radius: 3px;
   color: var(--text-secondary);
-  background: transparent;
+  background: var(--surface-1);
   transition:
-    color var(--dur-fast),
-    border-color var(--dur-fast),
-    background var(--dur-fast);
+    color var(--dur-fast) var(--ease-out-expo),
+    border-color var(--dur-fast) var(--ease-out-expo),
+    background var(--dur-fast) var(--ease-out-expo);
 }
 
 .confirmBtn:hover,
@@ -241,17 +294,19 @@
 }
 
 .noteBtn {
-  padding: var(--space-1) var(--space-2);
+  padding: 3px 10px;
   color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: var(--text-caption);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
   border: 1px solid var(--border-subtle);
   border-radius: 3px;
-  background: transparent;
+  background: var(--surface-1);
   transition:
-    color var(--dur-fast),
-    border-color var(--dur-fast),
-    background var(--dur-fast);
+    color var(--dur-fast) var(--ease-out-expo),
+    border-color var(--dur-fast) var(--ease-out-expo),
+    background var(--dur-fast) var(--ease-out-expo);
 }
 
 .noteBtn:hover,

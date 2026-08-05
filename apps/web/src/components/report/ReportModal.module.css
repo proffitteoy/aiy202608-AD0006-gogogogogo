@@ -1,0 +1,554 @@
+/* =============================================================
+ * 报告预览浮层：灰底 + 白纸 + 阴影，模拟真实 PDF 阅读器
+ * ============================================================= */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  padding: var(--space-4) var(--space-4) var(--space-7);
+  background: color-mix(in oklch, var(--surface-3) 92%, transparent);
+  backdrop-filter: blur(6px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  animation: scrimIn var(--dur-fast) var(--ease-out-expo);
+}
+
+/* 顶部工具条粘在滚动容器顶端，便于长报告随时关闭/打印 */
+.toolbarShell {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  max-width: 210mm;
+  margin: 0 auto var(--space-3);
+}
+
+@keyframes scrimIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* --- 顶部工具条 --- */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(35, 38, 48, 0.08);
+}
+
+.toolbarLabel {
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.toolbarActions {
+  display: inline-flex;
+  gap: var(--space-2);
+}
+
+.actionBtn {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 12px;
+  color: var(--text-inverse);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--accent);
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out-expo),
+    transform var(--dur-fast) var(--ease-out-expo);
+}
+
+.actionBtn:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+.closeBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 18px;
+  line-height: 1;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  cursor: pointer;
+  transition:
+    color var(--dur-fast) var(--ease-out-expo),
+    background var(--dur-fast) var(--ease-out-expo),
+    border-color var(--dur-fast) var(--ease-out-expo);
+}
+
+.closeBtn:hover {
+  color: var(--risk-high);
+  border-color: var(--risk-high);
+  background: var(--risk-high-bg);
+}
+
+/* --- A4 白纸：随内容长度自然增长；用背景重复画出页脚分隔线，
+ *    视觉上像多张 A4 相连（而不是一张无限长的纸）。 --- */
+.paper {
+  max-width: 210mm;
+  width: 100%;
+  padding: 20mm 20mm 24mm;
+  margin: 0 auto;
+  color: var(--text-primary);
+  background:
+    /* 每 297mm 一条 1px 虚线，模拟纸页分割 */
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(297mm - 1px),
+      color-mix(in oklch, var(--border-subtle) 70%, transparent) calc(297mm - 1px),
+      color-mix(in oklch, var(--border-subtle) 70%, transparent) 297mm
+    ),
+    #fff;
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  box-shadow:
+    0 4px 12px rgba(35, 38, 48, 0.08),
+    0 24px 64px rgba(35, 38, 48, 0.12);
+  animation: paperIn var(--dur-normal) var(--ease-out-expo);
+}
+
+@keyframes paperIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* --- 报告头 --- */
+.paperHead {
+  padding-bottom: var(--space-5);
+  margin-bottom: var(--space-5);
+  border-bottom: 2px solid var(--text-primary);
+}
+
+.eyebrowRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+  color: var(--text-tertiary);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.brand {
+  color: var(--accent);
+}
+
+.reportId {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+
+.paperTitle {
+  margin: 0 0 var(--space-3);
+  color: var(--text-primary);
+  font-family: var(--font-serif);
+  font-size: 26px;
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.paperMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+  margin: 0;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 12px;
+}
+
+.metaSep {
+  color: var(--text-tertiary);
+}
+
+/* --- 章节标题 --- */
+.h2 {
+  margin: var(--space-6) 0 var(--space-3);
+  padding-bottom: 6px;
+  color: var(--text-primary);
+  font-family: var(--font-serif);
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.h3 {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  margin: var(--space-4) 0 var(--space-2);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.evidenceCount {
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* --- 摘要块 --- */
+.summary {
+  padding-top: var(--space-2);
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.scorePill {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+}
+
+.scorePillLabel {
+  color: var(--text-tertiary);
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scorePillValue {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.summaryProse {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-serif);
+  font-size: 14px;
+  line-height: 1.75;
+  text-align: justify;
+  text-indent: 2em;
+}
+
+.summaryProse strong {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* --- 观点条目 --- */
+.opinionList {
+  margin: 0;
+  padding: 0 0 0 var(--space-5);
+  list-style: decimal;
+  counter-reset: item;
+}
+
+.opinionItem {
+  padding: var(--space-3) 0;
+  border-bottom: 1px dashed var(--border-subtle);
+}
+
+.opinionItem:last-child {
+  border-bottom: 0;
+}
+
+.opinionItemMuted {
+  opacity: 0.75;
+}
+
+.opinionItemStrike .opinionReason,
+.opinionItemStrike .opinionExcerpt {
+  text-decoration: line-through;
+  text-decoration-color: var(--text-tertiary);
+  color: var(--text-secondary);
+}
+
+.opinionReason {
+  margin: 0 0 4px;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.opinionExcerpt {
+  margin: 0 0 6px;
+  color: var(--text-secondary);
+  font-family: var(--font-serif);
+  font-size: 13px;
+  font-style: italic;
+  line-height: 1.6;
+}
+
+.opinionMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+  margin: 0;
+  color: var(--text-tertiary);
+  font-family: var(--font-sans);
+  font-size: 11px;
+}
+
+.opinionMetaTag {
+  padding: 1px 6px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  background: var(--surface-2);
+  border-radius: 2px;
+}
+
+.opinionMeta strong {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.opinionNote {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  margin: 6px 0 0;
+  padding: 6px 8px;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.5;
+  background: color-mix(in oklch, var(--accent) 5%, transparent);
+  border-left: 2px solid var(--accent);
+  border-radius: 2px;
+}
+
+.opinionNoteLabel {
+  flex-shrink: 0;
+  color: var(--accent);
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+/* --- 传导假设表 --- */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+  font-size: 12px;
+}
+
+.table th {
+  padding: 6px 8px;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--text-primary);
+}
+
+.table td {
+  padding: 8px;
+  color: var(--text-primary);
+  vertical-align: top;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.table td[data-numeric] {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.pill {
+  display: inline-block;
+  padding: 1px 8px;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  background: var(--surface-2);
+  border-radius: 999px;
+}
+
+.pill[data-status="confirmed"] {
+  color: var(--risk-low);
+  background: var(--risk-low-bg);
+}
+
+.pill[data-status="rejected"] {
+  color: var(--risk-high);
+  background: var(--risk-high-bg);
+}
+
+/* --- 证据附录 --- */
+.evidenceGroup {
+  margin-bottom: var(--space-4);
+}
+
+.evidenceList {
+  margin: 0;
+  padding: 0 0 0 var(--space-5);
+  list-style: decimal;
+}
+
+.evidenceItem {
+  padding: 6px 0;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.evidenceHead {
+  display: flex;
+  gap: 4px;
+  align-items: baseline;
+  margin: 0 0 2px;
+  color: var(--text-tertiary);
+  font-family: var(--font-sans);
+  font-size: 11px;
+}
+
+.evidenceSource {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.evidenceTitle {
+  margin: 0 0 2px;
+  color: var(--text-primary);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.evidenceBody {
+  margin: 0;
+  color: var(--text-secondary);
+  font-family: var(--font-serif);
+  font-size: 12px;
+  line-height: 1.65;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* --- 报告脚 --- */
+.paperFoot {
+  padding-top: var(--space-4);
+  margin-top: var(--space-6);
+  color: var(--text-tertiary);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  line-height: 1.6;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.paperFoot p {
+  margin: 0 0 2px;
+}
+
+/* --- 响应式：<768px 时纸张不再是 A4 硬约束 --- */
+@media (max-width: 780px) {
+  .paper {
+    width: calc(100% - var(--space-4));
+    padding: var(--space-5) var(--space-4);
+    min-height: 0;
+  }
+  .summaryGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* --- 章节分页提示（对打印+屏幕都生效） --- */
+.paper section {
+  break-inside: avoid-page;
+}
+.paper .h2 {
+  break-before: auto;
+  break-after: avoid;
+}
+.paper .opinionItem,
+.paper .evidenceItem,
+.paper .table tr {
+  break-inside: avoid;
+}
+
+/* --- 打印样式：只留白纸 --- */
+@media print {
+  .scrim {
+    position: static;
+    padding: 0;
+    background: #fff;
+    backdrop-filter: none;
+    overflow: visible;
+  }
+  .toolbarShell,
+  .toolbar {
+    display: none !important;
+  }
+  .paper {
+    max-width: none;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: #fff;
+    box-shadow: none;
+    animation: none;
+  }
+}

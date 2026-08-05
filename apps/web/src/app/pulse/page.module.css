@@ -1,0 +1,22 @@
+.main {
+  max-width: 1280px;
+  padding: var(--space-7) var(--space-6) var(--space-9);
+  margin: 0 auto;
+}
+
+.pulseSection {
+  margin-bottom: var(--space-8);
+}
+
+.streamSection {
+  margin-top: 0;
+}
+
+@media (max-width: 780px) {
+  .main {
+    padding: var(--space-5) var(--space-4) var(--space-7);
+  }
+  .pulseSection {
+    margin-bottom: var(--space-6);
+  }
+}

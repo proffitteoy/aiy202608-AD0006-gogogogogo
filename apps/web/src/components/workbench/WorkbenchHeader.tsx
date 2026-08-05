@@ -1,6 +1,9 @@
-import Link from "next/link";
+"use client";
+
+import { useState } from "react";
 
 import { ScoreBadge } from "@/components/overview/ScoreBadge";
+import { ReportModal } from "@/components/report/ReportModal";
 import {
   formatDateTime,
   formatEventStatus,
@@ -19,13 +22,10 @@ type Props = {
 };
 
 export function WorkbenchHeader({ detail, sourceCount }: Props) {
+  const [reportOpen, setReportOpen] = useState(false);
   return (
     <header className={styles.header}>
       <div className={styles.left}>
-        <Link href="/" className={styles.back} aria-label="返回总览">
-          ← 返回
-        </Link>
-
         <div className={styles.titleBlock}>
           <div className={styles.crumbs}>
             <ScoreBadge score={detail.score} />
@@ -50,31 +50,31 @@ export function WorkbenchHeader({ detail, sourceCount }: Props) {
       <div className={styles.right}>
         <div className={styles.meta}>
           <div className={styles.metaCell}>
-            <span className="eyebrow">Rule 3</span>
+            <span className={styles.metaLabel}>R3</span>
             <span className={styles.metaValue} data-numeric>
               {formatScore(detail.score.rawScore)}
             </span>
           </div>
           <div className={styles.metaCell}>
-            <span className="eyebrow">Rule 4</span>
+            <span className={styles.metaLabel}>R4</span>
             <span className={styles.metaValue} data-numeric>
               {formatScore(detail.score.calibratedScore)}
             </span>
           </div>
           <div className={styles.metaCell}>
-            <span className="eyebrow">置信度</span>
+            <span className={styles.metaLabel}>置信</span>
             <span className={styles.metaValue} data-numeric>
               {formatScore(detail.score.confidence)}
             </span>
           </div>
           <div className={styles.metaCell}>
-            <span className="eyebrow">评分区间</span>
+            <span className={styles.metaLabel}>区间</span>
             <span className={styles.metaValue} data-numeric>
               {formatScoreInterval(detail.score.scoreInterval)}
             </span>
           </div>
           <div className={styles.metaCell}>
-            <span className="eyebrow">证据</span>
+            <span className={styles.metaLabel}>证据</span>
             <span className={styles.metaValue} data-numeric>
               {sourceCount}
             </span>
@@ -84,12 +84,16 @@ export function WorkbenchHeader({ detail, sourceCount }: Props) {
         <button
           type="button"
           className={styles.reportBtn}
-          disabled
-          title="AnalysisSnapshot 与 Agent 2 Render 尚未接入"
+          onClick={() => setReportOpen(true)}
+          title="打开研究报告预览（可打印 / 导出 PDF）"
         >
           生成报告
         </button>
       </div>
+
+      {reportOpen ? (
+        <ReportModal detail={detail} onClose={() => setReportOpen(false)} />
+      ) : null}
     </header>
   );
 }
