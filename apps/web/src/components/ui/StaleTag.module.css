@@ -1,0 +1,11 @@
+.tag {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  padding: 2px 6px;
+  color: var(--risk-mid);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  background: var(--risk-mid-bg);
+  border-radius: 3px;
+}

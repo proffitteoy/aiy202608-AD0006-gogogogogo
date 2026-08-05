@@ -1,0 +1,44 @@
+.banner {
+  position: relative;
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-2) var(--space-6);
+  color: var(--text-primary);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--text-body-s);
+}
+
+.rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: var(--risk-mid);
+}
+
+.icon {
+  color: var(--risk-mid);
+  font-size: var(--text-body-l);
+}
+
+.text {
+  flex: 1;
+}
+
+.hint {
+  color: var(--text-tertiary);
+}
+
+.close {
+  color: var(--text-tertiary);
+  font-size: 20px;
+  line-height: 1;
+  padding: 0 var(--space-2);
+}
+
+.close:hover {
+  color: var(--text-primary);
+}
