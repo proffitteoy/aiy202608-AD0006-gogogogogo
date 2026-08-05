@@ -182,4 +182,3 @@ RiskTrace/
 Copyright © 2026 李炫良、林昭漫、陈泽江、吴思霖、林楠浚。
 
 除各文件或目录另有许可说明外，本项目自有代码与文档采用 [MIT License](LICENSE) 开源。`apps/*/vendor` 与 `infra/pgvector` 中的第三方组件不受根目录 MIT License 覆盖，其版权归各自权利人所有，并适用对应目录内的 `LICENSE` / `NOTICE`。
-1
