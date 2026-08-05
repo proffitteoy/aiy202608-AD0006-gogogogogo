@@ -57,56 +57,85 @@
 }
 
 .panel {
-  --text-caption: 12px;
-  --text-body-s: 14px;
-  --text-body: 15px;
-  --text-body-l: 18px;
   display: flex;
   flex-direction: column;
   height: 100%;
+  transition: background var(--dur-fast) var(--ease-out-expo);
+}
+
+.panel:hover {
+  background: color-mix(in oklch, var(--surface-2) 45%, transparent);
 }
 
 .panelHead {
   display: flex;
   gap: var(--space-3);
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
+  height: 40px;
+  padding: 0 var(--space-3) 0 var(--space-4);
   border-bottom: 1px solid var(--border-subtle);
 }
 
 .panelTitle {
-  margin: 2px 0 0;
+  margin: 0;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
   color: var(--text-primary);
-  font-size: var(--text-body-l);
-  font-weight: 500;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.panelIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: var(--surface-2);
+  border-radius: 4px;
+  transition:
+    color var(--dur-fast) var(--ease-out-expo),
+    background var(--dur-fast) var(--ease-out-expo);
+}
+
+.panel:hover .panelIcon {
+  color: var(--accent);
+  background: color-mix(in oklch, var(--accent) 10%, transparent);
 }
 
 .panelActions {
   display: flex;
-  gap: var(--space-3);
+  gap: var(--space-2);
   align-items: center;
 }
 
 .meta {
   color: var(--text-tertiary);
   font-family: var(--font-mono);
-  font-size: var(--text-body-s);
+  font-size: 11px;
+  letter-spacing: 0.02em;
 }
 
 .expandBtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   color: var(--text-tertiary);
   font-family: var(--font-mono);
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1;
   background: transparent;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid transparent;
   border-radius: 3px;
   cursor: pointer;
   transition:
@@ -139,6 +168,33 @@
   min-height: 0;
   padding: var(--space-3);
   overflow: hidden;
+}
+
+/* 顶部微光提示：面板顶部有一条极淡的品牌色高亮，hover 时加强 */
+.panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    color-mix(in oklch, var(--accent) 22%, transparent) 30%,
+    color-mix(in oklch, var(--accent) 22%, transparent) 70%,
+    transparent
+  );
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out-expo);
+}
+
+.panel {
+  position: relative;
+}
+
+.panel:hover::before {
+  opacity: 1;
 }
 
 @media (max-width: 1080px) {

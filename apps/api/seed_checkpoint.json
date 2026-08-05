@@ -1,0 +1,26 @@
+{
+  "last_import_at": "2026-08-05T07:46:31.014896+00:00",
+  "stats": {
+    "event": {
+      "inserted": 0,
+      "skipped": 1
+    },
+    "entities": {
+      "inserted": 0,
+      "skipped": 8
+    },
+    "documents": {
+      "inserted": 0,
+      "skipped": 20
+    },
+    "event_documents": {
+      "inserted": 0,
+      "skipped": 20
+    },
+    "evidence_links": {
+      "inserted": 0,
+      "skipped": 20
+    }
+  },
+  "status": "complete"
+}

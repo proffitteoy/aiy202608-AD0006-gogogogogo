@@ -57,6 +57,12 @@ type CustomNodeData = {
   highlighted?: boolean;
 };
 
+const nodeIcon: Record<TransmissionNodeType, string> = {
+  entity: "◉",
+  sector: "▤",
+  event: "★",
+};
+
 function EntityNode({ data }: NodeProps) {
   const nodeData = data as CustomNodeData;
   const classes = [styles.node];
@@ -67,10 +73,20 @@ function EntityNode({ data }: NodeProps) {
     <div
       className={classes.join(" ")}
       style={{ borderColor: nodeBorder[nodeData.type] }}
+      data-type={nodeData.type}
     >
       <Handle type="target" position={Position.Top} className={styles.handle} />
-      <span className={styles.nodeTag}>{nodeTypeLabel[nodeData.type]}</span>
-      <span className={styles.nodeLabel}>{nodeData.label}</span>
+      <span
+        className={styles.nodeIcon}
+        style={{ color: nodeBorder[nodeData.type] }}
+        aria-hidden="true"
+      >
+        {nodeIcon[nodeData.type]}
+      </span>
+      <div className={styles.nodeBody}>
+        <span className={styles.nodeTag}>{nodeTypeLabel[nodeData.type]}</span>
+        <span className={styles.nodeLabel}>{nodeData.label}</span>
+      </div>
       <Handle type="source" position={Position.Bottom} className={styles.handle} />
     </div>
   );
@@ -79,27 +95,29 @@ function EntityNode({ data }: NodeProps) {
 const nodeTypes = { entity: EntityNode };
 
 function layoutNodes(nodes: TransmissionNode[]): Node[] {
-  const centerX = 360;
-  const centerY = 230;
+  const centerX = 400;
+  const centerY = 260;
   const grouped = {
     event: nodes.filter((node) => node.type === "event"),
     entity: nodes.filter((node) => node.type === "entity"),
     sector: nodes.filter((node) => node.type === "sector"),
   };
   const result: Node[] = [];
+  const halfWidth = 90; // 节点宽 180 后的一半
+  const halfHeight = 26; // 节点高 ~52 的一半
 
   grouped.event.forEach((node, index) => {
     result.push({
       id: node.id,
       type: "entity",
-      position: { x: centerX - 48, y: centerY - 24 + index * 64 },
+      position: { x: centerX - halfWidth, y: centerY - halfHeight + index * 72 },
       data: { label: node.label, type: node.type },
     });
   });
 
   for (const [type, radius] of [
-    ["entity", 200],
-    ["sector", 320],
+    ["entity", 220],
+    ["sector", 360],
   ] as const) {
     grouped[type].forEach((node, index) => {
       const angle =
@@ -108,8 +126,8 @@ function layoutNodes(nodes: TransmissionNode[]): Node[] {
         id: node.id,
         type: "entity",
         position: {
-          x: centerX + Math.cos(angle) * radius - 48,
-          y: centerY + Math.sin(angle) * radius - 24,
+          x: centerX + Math.cos(angle) * radius - halfWidth,
+          y: centerY + Math.sin(angle) * radius - halfHeight,
         },
         data: { label: node.label, type: node.type },
       });

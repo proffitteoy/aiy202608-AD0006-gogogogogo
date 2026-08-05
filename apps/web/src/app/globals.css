@@ -48,19 +48,23 @@
   --font-mono:
     "JetBrains Mono", "Sarasa Mono SC", ui-monospace, Consolas, monospace;
 
-  /* --- 排版尺度 --- */
+  /* --- 排版尺度（B 端稠密版）--- */
   --text-caption: 11px;
   --text-body-s: 13px;
   --text-body: 14px;
   --text-body-l: 16px;
-  --text-h3: clamp(1.125rem, 1rem + 0.4vw, 1.375rem);
-  --text-h2: clamp(1.5rem, 1.2rem + 1vw, 2rem);
-  --text-h1: clamp(2rem, 1.5rem + 2vw, 3.25rem);
-  --text-display: clamp(2.5rem, 1.5rem + 4vw, 5rem);
-  --leading-tight: 1.15;
+  --text-panel-title: 14px;   /* 面板标题固定，不响应式跳字号 */
+  --text-metric: 22px;         /* 指标数字，从 h1 收窄 */
+  --text-h3: 15px;
+  --text-h2: clamp(1.125rem, 1rem + 0.4vw, 1.25rem);
+  --text-h1: clamp(1.375rem, 1.1rem + 0.8vw, 1.75rem);
+  --text-display: clamp(1.75rem, 1.3rem + 1.5vw, 2.25rem);
+  --leading-tight: 1.2;
   --leading-normal: 1.5;
 
-  /* --- 间距 --- */
+  /* --- 间距（含稠密档）--- */
+  --space-density-1: 6px;
+  --space-density-2: 10px;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -113,13 +117,93 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/**
+ * 极小上眉徽章：仅用于单元格标签、图注等真正 caption 位置。
+ * 面板/卡片标题请用 .panel-title 或 <h2>，不要再套 .eyebrow。
+ */
 .eyebrow {
   color: var(--text-tertiary);
   font-family: var(--font-sans);
   font-size: var(--text-caption);
   font-weight: 600;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+/* B 端标准面板标题：14px bold + 前置图标位。 */
+.panel-title {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-panel-title);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.panel-title svg,
+.panel-title [data-icon] {
+  width: 14px;
+  height: 14px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+/* 状态胶囊：降级提示、来源标签、风险等级 */
+.status-pill {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 2px 8px;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  font-weight: 500;
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  transition: background var(--dur-fast) var(--ease-out-expo);
+}
+
+.status-pill[data-tone="warn"] {
+  color: var(--risk-mid);
+  background: var(--risk-mid-bg);
+  border-color: color-mix(in oklch, var(--risk-mid) 30%, transparent);
+}
+
+.status-pill[data-tone="high"] {
+  color: var(--risk-high);
+  background: var(--risk-high-bg);
+  border-color: color-mix(in oklch, var(--risk-high) 30%, transparent);
+}
+
+.status-pill[data-tone="low"] {
+  color: var(--risk-low);
+  background: var(--risk-low-bg);
+  border-color: color-mix(in oklch, var(--risk-low) 30%, transparent);
+}
+
+/* 数据微条：影响矩阵、趋势指示、进度指标 */
+.data-bar {
+  display: inline-block;
+  width: 100%;
+  max-width: 80px;
+  height: 4px;
+  background: var(--surface-3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.data-bar > span {
+  display: block;
+  height: 100%;
+  background: currentColor;
+  border-radius: 2px;
+  transition: width var(--dur-normal) var(--ease-out-expo);
 }
 
 .surface-card {
@@ -188,5 +272,10 @@ a {
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+
+  /* 打开报告 modal 时：body 直接子元素只保留 modal，其它一律隐藏 */
+  body:has([data-report-root]) > :not([role="dialog"]) {
+    display: none !important;
   }
 }

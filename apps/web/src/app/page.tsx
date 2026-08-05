@@ -1,65 +1,141 @@
-import { EventCard } from "@/components/overview/EventCard";
-import { PulseTiles } from "@/components/overview/PulseTiles";
-import { DegradedBanner } from "@/components/ui/DegradedBanner";
-import { Header } from "@/components/ui/Header";
-import { derivePulse, loadEventList } from "@/lib/api/loaders";
+import Link from "next/link";
+
+import { ContainerScroll } from "@/components/landing/ContainerScroll";
+import { WorkbenchPreview } from "@/components/landing/WorkbenchPreview";
 
 import styles from "./page.module.css";
 
-export default async function OverviewPage() {
-  const result = await loadEventList();
-  const events = result.data;
-  const pulse = derivePulse(events);
+const DEMO_EVENT_ID = "4a897de9-f136-4e25-bc87-06c2920473c8";
 
+const FEATURES = [
+  {
+    n: "01",
+    title: "事件识别",
+    tag: "确定性聚合",
+    text: "把碎片化的官方文件、专业媒体与社交讨论，聚合成可复算的事件簇——每个簇都有唯一 ID、时间线和证据集。",
+  },
+  {
+    n: "02",
+    title: "观点归因",
+    tag: "LLM 候选 + 人工确认",
+    text: "LLM 提取立场、情绪与关键词，研究员一键纳入、排除或标注。分歧观点会同时保留，不合并成单一结论。",
+  },
+  {
+    n: "03",
+    title: "传导假设",
+    tag: "候选而非因果",
+    text: "自动生成 主体 → 板块 → 行业 的影响候选，每条边都可点开支撑证据。系统只提供假设，不宣称因果关系。",
+  },
+  {
+    n: "04",
+    title: "研判报告",
+    tag: "冻结与追溯",
+    text: "冻结事件当下的评分、观点与证据快照，研究员的标注写进研报正文，可打印、可导出 PDF、可版本对比。",
+  },
+];
+
+const STATS = [
+  { n: "5", u: "条社交讨论", meta: "跨平台聚合" },
+  { n: "20", u: "篇原文", meta: "官方 · 媒体 · 社交" },
+  { n: "4", u: "类主体", meta: "监管 · 上市公司 · 板块 · 行业" },
+  { n: "R3+R4", u: "评分校准", meta: "确定性 + 后验修正" },
+];
+
+export default function LandingPage() {
   return (
-    <>
-      <Header
-        activeEventCount={pulse.activeEvents}
-        scoredEventCount={pulse.scoredEvents}
-      />
-      {result.status === "degraded" ? (
-        <DegradedBanner
-          message="事件数据暂不可用"
-          hint={`${result.reason}，未使用本地样例替代`}
-        />
-      ) : null}
-      <main className={styles.main}>
-        <section className={styles.hero}>
-          <p className="eyebrow">今日 · Risk Pulse</p>
-          <h1 className={styles.title}>先让每条结论有出处，再讨论它意味着什么。</h1>
-          <p className={styles.dataNote} data-source={result.status}>
-            数据源：RiskTrace API · 固定 Demo 研究上下文
-          </p>
-        </section>
+    <main className={styles.main}>
+      <ContainerScroll
+        titleComponent={
+          <div className={styles.hero}>
+            <p className={styles.eyebrow}>金融事件 · 社交情绪 · 市场传导</p>
+            <h1 className={styles.heroTitle}>
+              把突发事件后的
+              <br />
+              海量信息，压缩成可核对的结论
+            </h1>
+            <p className={styles.heroLead}>
+              事件识别、观点归因、传导假设、证据下钻—— 一条链路留住每个结论的出处。
+            </p>
+          </div>
+        }
+      >
+        <WorkbenchPreview />
+      </ContainerScroll>
 
-        <PulseTiles pulse={pulse} />
-
-        <section aria-label="事件流" className={styles.stream}>
-          <header className={styles.streamHead}>
-            <p className="eyebrow">事件流</p>
-            <p className={styles.streamHint}>按首次发布时间倒序</p>
+      <section className={styles.features}>
+        <div className={styles.featuresInner}>
+          <header className={styles.sectionHead}>
+            <p className={styles.sectionEyebrow}>
+              <span className={styles.sectionEyebrowMark} aria-hidden="true">
+                ▎
+              </span>
+              四层可核对能力
+            </p>
+            <h2 className={styles.sectionTitle}>
+              研究员看得见推导过程，也看得见证据
+            </h2>
+            <p className={styles.sectionLead}>
+              系统只做确定性可复算的部分——事件识别、评分、观点候选、传导候选、证据链。
+              判断和结论由研究员做，人和机器的边界从头到尾清晰。
+            </p>
           </header>
 
-          {events.length > 0 ? (
-            <div className={styles.list}>
-              {events.map((event, index) => (
-                <div
-                  key={event.id}
-                  className={styles.item}
-                  style={{ animationDelay: `${index * 60}ms` }}
-                >
-                  <EventCard event={event} />
+          <div className={styles.featureGrid}>
+            {FEATURES.map((f) => (
+              <article key={f.title} className={styles.featureCard}>
+                <div className={styles.featureHead}>
+                  <span className={styles.featureN} data-numeric>
+                    {f.n}
+                  </span>
+                  <span className={styles.featureTag}>{f.tag}</span>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className={styles.empty} role="status">
-              <strong>暂无可展示事件</strong>
-              <span>导入完成后，事件会从后端查询结果中出现。</span>
-            </div>
-          )}
-        </section>
-      </main>
-    </>
+                <h3 className={styles.featureTitle}>{f.title}</h3>
+                <p className={styles.featureText}>{f.text}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.cta}>
+        <div className={styles.ctaInner}>
+          <header className={styles.ctaHead}>
+            <p className={styles.ctaEyebrow}>Live Demo · 真实事件</p>
+            <h2 className={styles.ctaTitle}>
+              看一个真实事件是怎么被追溯的
+            </h2>
+            <p className={styles.ctaLead}>
+              以 2026 年 7 月 22 日
+              <em className={styles.ctaEm}>能源转型四关键词引爆 A 股涨停潮</em>
+              为例——真实社交讨论、真实原文、真实评分与传导候选，全部可点、可下钻、可导出。
+            </p>
+          </header>
+
+          <div className={styles.stats} role="list">
+            {STATS.map((s) => (
+              <div key={s.u} className={styles.stat} role="listitem">
+                <span className={styles.statN} data-numeric>
+                  {s.n}
+                </span>
+                <span className={styles.statU}>{s.u}</span>
+                <span className={styles.statMeta}>{s.meta}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className={styles.ctaActions}>
+            <Link href={`/event/${DEMO_EVENT_ID}`} className={styles.ctaPrimary}>
+              <span>打开 Demo 事件</span>
+              <span className={styles.ctaArrow} aria-hidden="true">
+                →
+              </span>
+            </Link>
+            <Link href="/pulse" className={styles.ctaSecondary}>
+              查看事件流
+            </Link>
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }

@@ -64,8 +64,8 @@ export default async function EventWorkbenchPage({
             <WorkbenchPanel
               id="timeline"
               eyebrow="TIMELINE"
-              title="文档时间线"
-              meta={`${detail.timeline.length} 个时间桶`}
+              title="事件时间线"
+              meta={`${detail.timeline.length} 个时间点`}
             >
               <Timeline points={detail.timeline} />
             </WorkbenchPanel>

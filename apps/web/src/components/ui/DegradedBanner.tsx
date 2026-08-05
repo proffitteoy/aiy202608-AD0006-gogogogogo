@@ -10,30 +10,42 @@ type Props = {
 };
 
 export function DegradedBanner({
-  message = "语义分析暂不可用",
+  message = "部分接口降级",
   hint = "规则引擎结果正常显示",
 }: Props) {
+  const [expanded, setExpanded] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+
   if (dismissed) return null;
 
   return (
-    <div className={styles.banner} role="status">
-      <span className={styles.rail} aria-hidden="true" />
-      <span className={styles.icon} aria-hidden="true">
-        ⚠
-      </span>
-      <span className={styles.text}>
-        <strong>{message}</strong>
-        <span className={styles.hint}> · {hint}</span>
-      </span>
+    <div className={styles.wrap} role="status">
       <button
         type="button"
-        className={styles.close}
-        onClick={() => setDismissed(true)}
-        aria-label="收起降级提示"
+        className={`status-pill ${styles.pill}`}
+        data-tone="warn"
+        onClick={() => setExpanded((v) => !v)}
+        aria-expanded={expanded}
       >
-        ×
+        <span aria-hidden="true">⚠</span>
+        <span>{message}</span>
+        <span className={styles.chev} aria-hidden="true">
+          {expanded ? "▴" : "▾"}
+        </span>
       </button>
+      {expanded ? (
+        <div className={styles.tray} role="note">
+          <p className={styles.trayText}>{hint}</p>
+          <button
+            type="button"
+            className={styles.trayClose}
+            onClick={() => setDismissed(true)}
+            aria-label="不再显示此降级提示"
+          >
+            不再显示
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
