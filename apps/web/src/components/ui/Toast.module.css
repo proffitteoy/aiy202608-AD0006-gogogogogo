@@ -1,0 +1,110 @@
+.stack {
+  position: fixed;
+  top: var(--space-4);
+  right: var(--space-4);
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: min(360px, calc(100vw - var(--space-6)));
+  pointer-events: none;
+}
+
+.toast {
+  position: relative;
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-3) var(--space-4);
+  padding-left: calc(var(--space-4) + 3px);
+  color: var(--text-primary);
+  background: var(--surface-1);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(35, 38, 48, 0.15);
+  pointer-events: auto;
+  animation: toastIn var(--dur-normal) var(--ease-out-expo);
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.rail {
+  position: absolute;
+  top: var(--space-2);
+  bottom: var(--space-2);
+  left: 0;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+}
+
+.kind-info .rail {
+  background: var(--accent);
+}
+.kind-success .rail {
+  background: var(--risk-low);
+}
+.kind-warning .rail {
+  background: var(--risk-mid);
+}
+.kind-error .rail {
+  background: var(--risk-high);
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--text-body);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.hint {
+  margin: 2px 0 0;
+  color: var(--text-secondary);
+  font-size: var(--text-body-s);
+  line-height: 1.5;
+}
+
+.action {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  background: transparent;
+  border: 1px solid color-mix(in oklch, var(--accent) 30%, transparent);
+  border-radius: 3px;
+  transition: color var(--dur-fast), border-color var(--dur-fast), background var(--dur-fast);
+}
+
+.action:hover {
+  background: color-mix(in oklch, var(--accent) 8%, transparent);
+  border-color: var(--accent);
+}
+
+.close {
+  flex-shrink: 0;
+  padding: 0 var(--space-1);
+  color: var(--text-tertiary);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.close:hover {
+  color: var(--text-primary);
+}

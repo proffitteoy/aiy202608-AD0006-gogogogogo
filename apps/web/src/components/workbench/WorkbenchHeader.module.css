@@ -1,0 +1,129 @@
+.header {
+  display: flex;
+  gap: var(--space-5);
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-0);
+}
+
+.left {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+  flex: 1;
+  min-width: 0;
+}
+
+.back {
+  color: var(--text-secondary);
+  font-size: var(--text-body-s);
+  padding: var(--space-1) var(--space-2);
+  border-radius: 4px;
+  transition: color var(--dur-fast), background var(--dur-fast);
+}
+
+.back:hover {
+  color: var(--text-primary);
+  background: var(--surface-2);
+}
+
+.titleBlock {
+  flex: 1;
+  min-width: 0;
+}
+
+.crumbs {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+.time {
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: var(--text-body-s);
+}
+
+.version {
+  padding: 2px 6px;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  background: color-mix(in oklch, var(--accent) 15%, transparent);
+  border-radius: 3px;
+}
+
+.updated {
+  padding-left: var(--space-2);
+  margin-left: 2px;
+  color: var(--text-tertiary);
+  font-size: var(--text-body-s);
+  border-left: 1px solid var(--border-subtle);
+  cursor: help;
+}
+
+.title {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-serif);
+  font-size: var(--text-h2);
+  font-weight: 500;
+  line-height: var(--leading-tight);
+  letter-spacing: -0.02em;
+}
+
+.right {
+  display: flex;
+  gap: var(--space-5);
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.meta {
+  display: flex;
+  gap: var(--space-5);
+}
+
+.metaCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.metaValue {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-body-l);
+  font-weight: 500;
+}
+
+.negative {
+  color: var(--risk-high);
+}
+
+.positive {
+  color: var(--risk-low);
+}
+
+.reportBtn {
+  padding: var(--space-2) var(--space-4);
+  color: var(--surface-0);
+  font-weight: 600;
+  background: var(--accent);
+  border-radius: 4px;
+  transition:
+    background var(--dur-fast) var(--ease-out-expo),
+    transform var(--dur-fast) var(--ease-out-expo);
+}
+
+.reportBtn:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+.reportBtn:active {
+  transform: translateY(0);
+}

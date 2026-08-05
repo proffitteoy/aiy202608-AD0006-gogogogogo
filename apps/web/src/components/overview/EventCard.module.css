@@ -1,0 +1,156 @@
+.card {
+  position: relative;
+  display: block;
+  padding: var(--space-4) var(--space-5) var(--space-4) calc(var(--space-5) + 6px);
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  overflow: hidden;
+  transition:
+    background var(--dur-fast) var(--ease-out-expo),
+    border-color var(--dur-fast) var(--ease-out-expo),
+    transform var(--dur-fast) var(--ease-out-expo);
+}
+
+.card:hover {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+  transform: translateX(2px);
+}
+
+.card:hover .rail {
+  transform: scaleX(1.67);
+}
+
+.rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  transform-origin: left;
+  transition: transform var(--dur-fast) var(--ease-out-expo);
+}
+
+.high .rail {
+  background: var(--risk-high);
+}
+.mid .rail {
+  background: var(--risk-mid);
+}
+.low .rail {
+  background: var(--risk-low);
+}
+
+.high {
+  background: color-mix(in oklch, var(--surface-1) 88%, var(--risk-high) 12%);
+}
+
+.head {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+.time {
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: var(--text-body-s);
+}
+
+.stale {
+  padding: 2px 6px;
+  color: var(--risk-mid);
+  font-size: var(--text-caption);
+  background: var(--risk-mid-bg);
+  border-radius: 3px;
+}
+
+.title {
+  margin: 0 0 var(--space-2);
+  color: var(--text-primary);
+  font-family: var(--font-serif);
+  font-size: var(--text-h3);
+  font-weight: 500;
+  line-height: var(--leading-tight);
+  letter-spacing: -0.01em;
+}
+
+.high .title {
+  font-size: 20px;
+}
+
+.meta {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  margin-bottom: var(--space-3);
+  color: var(--text-secondary);
+  font-size: var(--text-body-s);
+}
+
+.dot {
+  color: var(--text-tertiary);
+}
+
+.footer {
+  display: flex;
+  gap: var(--space-5);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.spark {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.metrics {
+  display: flex;
+  gap: var(--space-4);
+  align-items: baseline;
+  color: var(--text-tertiary);
+  font-size: var(--text-body-s);
+}
+
+.metric strong {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+.heat {
+  display: inline-flex;
+  gap: 2px;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.heatUp {
+  color: var(--risk-high);
+}
+
+.heatDown {
+  color: var(--risk-low);
+}
+
+/* 低风险卡：压缩形态 */
+.low {
+  padding-top: var(--space-3);
+  padding-bottom: var(--space-3);
+}
+
+.low .title {
+  margin-bottom: var(--space-2);
+  font-size: var(--text-body-l);
+}
+
+.low .meta {
+  display: none;
+}
+
+.low .footer {
+  justify-content: flex-end;
+}
