@@ -4,7 +4,6 @@ from datetime import UTC, datetime
 from risktrace.api.routes.events import _score_summary
 from risktrace.db.models import Event, EventScoreCalibration
 
-
 TENANT_ID = uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
 EVENT_ID = uuid.UUID("e1000000-0000-0000-0000-000000000001")
 SCORE_CALCULATION_ID = uuid.UUID("10000000-0000-0000-0000-000000000001")

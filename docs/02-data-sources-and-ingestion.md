@@ -43,11 +43,14 @@ RawDocument {
   id: UUID
   tenant_id: UUID | null
   source_type: "fact" | "news" | "social" | "market"
+  source_level: "official" | "professional_media" | "public_discussion" | "market_data"
   platform: string
   source_id: string
   source_url: string | null
   published_at: datetime
   collected_at: datetime
+  received_at: datetime
+  replay_at: datetime | null
   author_id_hash: string | null
   title: string | null
   raw_text: string | null
@@ -58,8 +61,50 @@ RawDocument {
   license_scope: string
   content_hash: string
   raw_payload_ref: string | null
+  source_metadata: object
 }
 ```
+
+`tenant_id` 可空仅用于兼容早期迁移中的旧记录；统一写接口始终从服务端 principal 写入非空 tenant。来源级幂等键为 `(tenant_id, platform, source_id)`。`received_at` 由服务端生成，不能由调用方伪造；`replay_at` 只是可选投递语义，不参与分析主时间轴。
+
+### 4.1 已实现的统一写接口
+
+```http
+POST /api/v1/ingestion/items
+Authorization: Bearer <service-account-token>
+```
+
+请求使用严格 `SourceRecord`：
+
+```json
+{
+  "external_id": "announcement-20260805-001",
+  "source": {
+    "provider": "licensed-disclosures",
+    "stream": "announcements",
+    "type": "fact",
+    "level": "official",
+    "collection_method": "authorized_api",
+    "license_scope": "internal_research"
+  },
+  "published_at": "2026-08-05T09:30:00+08:00",
+  "collected_at": "2026-08-05T09:31:00+08:00",
+  "title": "公告标题",
+  "content": "公告正文",
+  "url": "https://example.com/disclosures/1",
+  "metadata": {"author": "Issuer"}
+}
+```
+
+- `tenant_id`、`event_id`、`sentiment`、`topic` 和风险分数字段均被 schema 拒绝。
+- token 在服务端映射 tenant 与允许的 provider；provider 越权返回 HTTP 403。
+- 同一租户、provider、external ID 和不可变内容重投返回 `duplicate`，不覆盖首条原始记录，但会追加新的 `IngestionReceipt`。
+- 同一来源身份对应不同不可变内容返回 HTTP 409；纠错不能原地覆盖。
+- 跨 external ID 的相同内容仍分别保存，并在响应中给出已有内容文档 ID。
+- 未提供互动量时保存为空对象，并在来源元数据中标记不可用；不得填充数值 0。
+- 响应 `processing_status=pending_enrichment` 只证明原始数据已接收，不代表事件、评分或 Agent 已运行。
+
+当前实现已包含 ORM、Alembic 迁移、路由和契约测试源码。本次没有执行 PostgreSQL 迁移或端到端接口验证，因此“代码已实现”和“运行已验证”必须继续区分。
 
 ## 5. 数据处理流水线
 
@@ -110,6 +155,8 @@ interface SourceAdapter:
 
 - 所有内部存储统一使用 UTC 时间戳，API 同时返回用户时区显示值；界面默认 Asia/Shanghai。
 
+- received_at 是服务端实际接收时间；历史回放可另附 replay_at。二者都不得替代 published_at 进入事件窗口。
+
 - 任何事件热度窗口必须基于 published_at，并在数据延迟过高时显示“样本不完整”状态。
 
 ## 9. 来源可信度与权重
@@ -149,6 +196,9 @@ weighted_signal_i = semantic_score_i
 | 表 | 主要字段 |
 | --- | --- |
 | raw_documents | 原始标准化文档 |
+| ingestion_receipts | 每次投递的 document、接收时间、结果与下游处理状态 |
+| source_checkpoints | tenant/provider/stream 的采集游标 |
+| source_health | 来源连续失败、最近成功/失败与显式降级状态 |
 | documents_enriched | 语言、实体、重复组、质量标签 |
 | events | 事件主表与状态 |
 | event_documents | 事件—文档关联及权重 |
@@ -158,7 +208,6 @@ weighted_signal_i = semantic_score_i
 | entities | 行业、公司、商品、政策实体 |
 | market_bars | 行情时间序列 |
 | evidence_links | 结论—证据关系 |
-| source_health | 数据源延迟、错误率、状态 |
 
 ## 13. MVP 验收标准
 

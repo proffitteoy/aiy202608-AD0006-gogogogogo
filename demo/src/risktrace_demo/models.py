@@ -148,9 +148,7 @@ class SourceRecord:
             content_hash=value["metadata"]["content_hash"],
             raw_payload_ref=value["raw_payload_ref"],
             author=value.get("metadata", {}).get("author"),
-            engagement=(
-                dict(value["engagement"]) if value.get("engagement") is not None else None
-            ),
+            engagement=(dict(value["engagement"]) if value.get("engagement") is not None else None),
             is_original=value.get("is_original"),
             metadata={
                 key: item

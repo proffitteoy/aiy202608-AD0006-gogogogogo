@@ -39,12 +39,13 @@ RiskTrace 面向证券研究员、资管研究团队和风险研究岗位，围�
 | 模块 | 状态 | 说明 |
 | --- | --- | --- |
 | 工程基线 | 已实现 | Next.js Web、FastAPI API、PostgreSQL / Redis / MinIO 编排及真实就绪探测 |
+| 统一数据接入 | 后端源码已实现 | `POST /api/v1/ingestion/items` 校验 SourceRecord，以服务端租户和 provider scope 幂等写入 RawDocument，并追加 IngestionReceipt；本次未做数据库运行验证 |
 | 事件与证据 | 后端源码已实现 | 固定研究场景幂等导入器，以及事件列表、工作台聚合、证据与文档查询 API |
-| 事件引擎 | 内核已实现 | `event-match-v1`、`admission-v2`、`confirmation-v2`、去重、聚类中心、热度、动量与生命周期规则；尚未接入自动采集和后台调度 |
-| Rule 3/4 评分链 | 内核已实现 | `deterministic-scoring-v1` 与 `score-calibration-v1` 可复算并有迁移记录；拒绝 Agent 分数输入，尚未接入业务 API 和前端 |
+| 事件引擎 | 内核已实现 | `event-match-v1`、`admission-v2`、`confirmation-v2`、去重、聚类中心、热度、动量与生命周期规则；统一接入后的 enrichment、规则编排和后台调度尚未接线 |
+| Rule 3/4 评分链 | 内核与只读展示已实现 | `deterministic-scoring-v1` 与 `score-calibration-v1` 可复算并有迁移记录；事件 API 和前端可读取评分、置信度与区间，但统一接入后的自动计算和持久化编排尚未接线 |
 | 语义候选 | 数据结构与查询已实现 | OpinionRecord / TransmissionEdge 候选持久化结构和固定 Demo 租户查询已提供；Agent 1/2 生成实现按评分链前置条件暂缓 |
-| 历史数据回放 | 来源侧已实现 | 3 个真实 DOCX 场景可转换、隔离坏记录并按可控时钟回放；统一 ingestion API 尚未接线 |
-| 研究工作台 | 尚未实现 | 当前 Web 只展示真实基础设施状态，不展示伪事件；风险总览、图表、传导图和证据下钻仍待接线 |
+| 历史数据回放 | 来源侧已实现 | 3 个真实 DOCX 场景可转换、隔离坏记录并按可控时钟回放；Demo 接口与端到端联调由 Demo 侧继续维护 |
+| 研究工作台 | 前端源码已实现 | Risk Overview、Event Workspace、文档量时间线、评分、观点/传导只读结果和证据抽屉已读取真实 API；影响矩阵、Snapshot 和报告显示未生成，不使用 mock 补齐；本次尚未完成浏览器连接真实数据库的运行验收 |
 
 ## 本地演示
 
@@ -54,9 +55,12 @@ RiskTrace 面向证券研究员、资管研究团队和风险研究岗位，围�
 - API 交互文档：<http://localhost:8000/api/docs>
 - API 存活检查：<http://localhost:8000/api/health/live>
 - API 就绪检查：<http://localhost:8000/api/health/ready>
+- 统一接入接口：`POST http://localhost:8000/api/v1/ingestion/items`
 - MinIO 控制台：<http://localhost:9001>
 
-当前 Web 首屏用于验证 Web → FastAPI → PostgreSQL / Redis / MinIO 的真实运行链路，不代表完整研究工作台已经交付。事件、证据和语义候选查询接口以 API 文档中的实际路由为准。
+当前 Web 已提供事件总览和工作台，不再只是基础设施状态页。它只展示后端可核对的数据；后端
+不可达或 Agent/Snapshot/报告尚未生成时显示降级或未生成，不使用浏览器 mock。自动 Rule 1-4
+编排、Agent 1/2 和报告闭环仍未交付。
 
 ### 历史资料转换与回放
 
@@ -68,7 +72,35 @@ npm run demo:convert
 npm run test:demo
 ```
 
-回放状态机、checkpoint 和 HTTP 发送端已经实现；由于统一 ingestion 路由尚未在 FastAPI 中落地，当前只完成了 dry-run 和发送端契约测试，未完成真实 API/数据库端到端验证。详细数据质量与命令见 [Demo 历史回放说明](demo/README.md)。
+回放状态机、checkpoint 和带 Bearer token 的 HTTP 发送端由 Demo 侧维护。后端统一 ingestion
+路由及落库代码已经实现，但本次没有完成真实 API/数据库回放验证。详细数据质量、凭据要求与
+命令见 [Demo 历史回放说明](demo/README.md)。
+
+### 统一接入 API
+
+写入前在 `.env` 配置 `RISKTRACE_INGESTION_API_TOKEN`、服务端租户和允许的 provider。调用方只能提交来源事实，不能提交 `tenant_id`、`event_id`、情绪、主题或风险分数：
+
+```powershell
+$headers = @{ Authorization = "Bearer $env:RISKTRACE_INGESTION_API_TOKEN" }
+$body = @{
+  external_id = "announcement-20260805-001"
+  source = @{
+    provider = "example-provider"
+    stream = "announcements"
+    type = "fact"
+    level = "official"
+    collection_method = "authorized_api"
+    license_scope = "internal_research"
+  }
+  published_at = "2026-08-05T09:30:00+08:00"
+  title = "公告标题"
+  content = "公告正文"
+  url = "https://example.com/disclosures/1"
+} | ConvertTo-Json -Depth 4
+Invoke-RestMethod -Method Post -Uri http://localhost:8000/api/v1/ingestion/items -Headers $headers -ContentType application/json -Body $body
+```
+
+成功响应会给出 `document_id`、本次投递的 `receipt_id`、`inserted/duplicate` 结果及 `pending_enrichment`。该状态只表示原始数据已接收，不能解释为 Rule 1-4 已执行。
 
 ## 技术栈
 
@@ -138,7 +170,9 @@ npm run check
 docker compose config --quiet
 ```
 
-`npm run check` 依次执行前端 ESLint、TypeScript 检查、生产构建、后端与 Demo Ruff、后端 pytest，以及 Demo 回放单元测试。`/api/health/live` 只表示 API 进程存活；数据库、缓存和对象存储是否可用必须以 `/api/health/ready` 为准。
+`npm run check` 依次执行前端 ESLint、TypeScript 检查和生产构建、后端 Ruff、Demo Ruff、后端
+pytest 与 Demo 回放单元测试。`/api/health/live` 只表示 API 进程存活；数据库、缓存和对象存储
+是否可用必须以 `/api/health/ready` 为准。
 
 ## 目录结构
 
@@ -161,10 +195,10 @@ RiskTrace/
 
 ## 后续计划
 
-- 将固定研究场景、现有事件/证据 API 与前端工作台接成可下钻的演示闭环。
-- 接入合规数据源、checkpoint、幂等重跑和明确的来源降级状态。
+- 启动真实数据库，将历史回放经统一 ingestion API 写入并验证幂等、时间和来源血缘。
+- 为合规数据源实现 Adapter 与调度，将已落库的 checkpoint 和来源健康状态接入真实采集运行链。
 - 将事件引擎与 Rule 3/4 评分内核接入持久化业务调用链和后台任务。
-- 实现 AnalysisSnapshot、风险总览、事件工作台、告警、导出与人工复核。
+- 实现 AnalysisSnapshot、告警、导出与轻量人工复核；Demo 不建设登录、角色或审批后台。
 - 按顺序实现 Agent 1 Event Tagger、Agent 2 Analyze 和基于 Snapshot 的 Agent 2 Render。
 - 在企业化阶段补齐认证、真实多租户隔离与完整审计。
 

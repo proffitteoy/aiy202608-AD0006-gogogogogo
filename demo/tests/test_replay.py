@@ -166,17 +166,26 @@ class DemoReplayProviderTests(unittest.IsolatedAsyncioTestCase):
 
 
 class HttpIngestionSinkTests(unittest.IsolatedAsyncioTestCase):
+    async def test_bearer_token_is_required(self) -> None:
+        with self.assertRaises(ValueError):
+            HttpIngestionSink(
+                "http://127.0.0.1:8000/api/v1/ingestion/items",
+                bearer_token=" ",
+            )
+
     async def test_documented_payload_and_duplicate_response(self) -> None:
         record = load_dataset().records[0]
         captured: list[dict] = []
 
-        def transport(endpoint, body, timeout, idempotency_key):
+        def transport(endpoint, body, timeout, idempotency_key, bearer_token):
             captured.append(json.loads(body))
             self.assertEqual(idempotency_key, record.external_id)
+            self.assertEqual(bearer_token, "demo-token")
             return TransportResponse(200, b'{"outcome":"duplicate"}')
 
         sink = HttpIngestionSink(
             "http://127.0.0.1:8000/api/v1/ingestion/items",
+            bearer_token="demo-token",
             transport=transport,
         )
         replay_at = datetime(2026, 8, 5, 4, 0, tzinfo=UTC)
@@ -199,13 +208,14 @@ class HttpIngestionSinkTests(unittest.IsolatedAsyncioTestCase):
         statuses = iter([503, 201])
         calls = 0
 
-        def retrying_transport(endpoint, body, timeout, idempotency_key):
+        def retrying_transport(endpoint, body, timeout, idempotency_key, bearer_token):
             nonlocal calls
             calls += 1
             return next(statuses)
 
         sink = HttpIngestionSink(
             "http://localhost/api/v1/ingestion/items",
+            bearer_token="demo-token",
             max_attempts=2,
             backoff_seconds=0,
             transport=retrying_transport,
@@ -220,13 +230,14 @@ class HttpIngestionSinkTests(unittest.IsolatedAsyncioTestCase):
 
         rejected_calls = 0
 
-        def rejected_transport(endpoint, body, timeout, idempotency_key):
+        def rejected_transport(endpoint, body, timeout, idempotency_key, bearer_token):
             nonlocal rejected_calls
             rejected_calls += 1
             return 409
 
         rejected_sink = HttpIngestionSink(
             "http://localhost/api/v1/ingestion/items",
+            bearer_token="demo-token",
             max_attempts=3,
             backoff_seconds=0,
             transport=rejected_transport,

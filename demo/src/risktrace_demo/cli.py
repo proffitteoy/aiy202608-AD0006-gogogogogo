@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -72,6 +73,11 @@ def _list_scenarios(args: argparse.Namespace) -> int:
         manifest = load_manifest(path)
         records_path = path.parent / "records.jsonl"
         rejected_path = path.parent / "rejected.jsonl"
+        providers = (
+            sorted({record.source.provider for record in ScenarioDataset.load(path).records})
+            if records_path.is_file()
+            else []
+        )
         rows.append(
             {
                 "id": manifest.id,
@@ -79,6 +85,7 @@ def _list_scenarios(args: argparse.Namespace) -> int:
                 "converted": records_path.is_file(),
                 "rejected_available": rejected_path.is_file(),
                 "market": manifest.data_quality["market"],
+                "providers": providers,
             }
         )
     print(json.dumps(rows, ensure_ascii=False, indent=2))
@@ -120,6 +127,8 @@ def _convert(args: argparse.Namespace) -> int:
 def _replay(args: argparse.Namespace) -> int:
     if not args.dry_run and not args.endpoint:
         raise ValueError("--endpoint is required unless --dry-run is used")
+    if not args.dry_run and not os.getenv("RISKTRACE_INGESTION_API_TOKEN", "").strip():
+        raise ValueError("RISKTRACE_INGESTION_API_TOKEN is required unless --dry-run is used")
     if args.interval_ms is not None and args.interval_ms <= 0:
         raise ValueError("--interval-ms must be positive")
     return asyncio.run(_run_replay(args))
@@ -136,7 +145,14 @@ async def _run_replay(args: argparse.Namespace) -> int:
     checkpoint_path = None
     if not args.no_checkpoint:
         checkpoint_path = demo_root.parent / "runtime" / "demo" / f"{manifest.id}.json"
-    sink = JsonLineSink() if args.dry_run else HttpIngestionSink(args.endpoint)
+    sink = (
+        JsonLineSink()
+        if args.dry_run
+        else HttpIngestionSink(
+            args.endpoint,
+            bearer_token=os.environ["RISKTRACE_INGESTION_API_TOKEN"],
+        )
+    )
     provider = DemoReplayProvider(
         dataset,
         sink,

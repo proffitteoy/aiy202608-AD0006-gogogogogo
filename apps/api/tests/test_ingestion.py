@@ -38,6 +38,7 @@ def source_payload(**overrides: object) -> dict[str, object]:
 class RecordingStore:
     def __init__(self) -> None:
         self.values: dict[str, object] | None = None
+        self.replay_at: datetime | None = None
 
     async def store(
         self,
@@ -49,9 +50,9 @@ class RecordingStore:
         replay_at: datetime | None,
     ) -> StoredIngestion:
         self.values = values
+        self.replay_at = replay_at
         assert provider == "licensed-disclosures"
         assert stream == "announcements"
-        assert replay_at is None
         return StoredIngestion(
             outcome="inserted",
             document_id=uuid.UUID("10000000-0000-0000-0000-000000000001"),
@@ -62,12 +63,21 @@ class RecordingStore:
 
 
 def test_source_record_rejects_downstream_authority_fields() -> None:
-    for field in ("tenant_id", "event_id", "sentiment", "risk", "topic"):
+    for field in (
+        "tenant_id",
+        "event_id",
+        "sentiment",
+        "risk",
+        "topic",
+        "raw_score",
+        "calibrated_score",
+    ):
         with pytest.raises(ValidationError):
             SourceRecord.model_validate(source_payload(**{field: "not-source-data"}))
 
-    with pytest.raises(ValidationError):
-        SourceRecord.model_validate(source_payload(metadata={"risk_score": 0.8}))
+    for field in ("event_id", "risk_score", "raw_score", "calibrated_score"):
+        with pytest.raises(ValidationError):
+            SourceRecord.model_validate(source_payload(metadata={field: 0.8}))
 
 
 def test_source_record_requires_timezone_and_matching_source_level() -> None:
@@ -97,6 +107,14 @@ async def test_ingestion_service_normalizes_utc_without_faking_engagement() -> N
     assert store.values["collected_at"] == received_at
     assert store.values["received_at"] == received_at
     assert store.values["engagement"] == {}
+    assert store.replay_at is None
+    assert {
+        "event_id",
+        "sentiment",
+        "risk_score",
+        "raw_score",
+        "calibrated_score",
+    }.isdisjoint(store.values)
     metadata = store.values["source_metadata"]
     assert isinstance(metadata, dict)
     ingestion_metadata = metadata["_risktrace_ingestion"]
@@ -150,3 +168,28 @@ def test_source_record_converts_non_utc_offset() -> None:
 
     assert record.collected_at == datetime(2026, 8, 5, 2, 0, tzinfo=UTC)
     assert record.published_at.utcoffset() == timedelta(0)
+
+
+@pytest.mark.asyncio
+async def test_ingestion_keeps_published_collected_received_and_replay_times_distinct() -> None:
+    received_at = datetime(2026, 8, 5, 4, 0, tzinfo=UTC)
+    store = RecordingStore()
+    service = IngestionService(store, now=lambda: received_at)
+
+    record = SourceRecord.model_validate(
+        source_payload(
+            collected_at="2026-08-05T10:00:00+08:00",
+            replay_at="2026-08-05T11:00:00+08:00",
+        )
+    )
+    await service.ingest(
+        record,
+        tenant_id=uuid.UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+    )
+
+    assert store.values is not None
+    assert store.values["published_at"] == datetime(2026, 8, 5, 1, 30, tzinfo=UTC)
+    assert store.values["collected_at"] == datetime(2026, 8, 5, 2, 0, tzinfo=UTC)
+    assert store.values["received_at"] == received_at
+    assert store.values["replay_at"] == datetime(2026, 8, 5, 3, 0, tzinfo=UTC)
+    assert store.replay_at == datetime(2026, 8, 5, 3, 0, tzinfo=UTC)

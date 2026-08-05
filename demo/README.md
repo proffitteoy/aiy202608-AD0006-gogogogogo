@@ -13,8 +13,8 @@
 | 不合格记录隔离 | 已实现 | 写入 `rejected.jsonl`，不静默补造发布时间 |
 | 固定间隔回放 | 已实现 | 支持 start/pause/resume/stop/reset/seek/set_speed |
 | checkpoint | 已实现 | 成功投递后才推进 cursor；运行状态写入根 `runtime/demo/` |
-| HTTP 投递 | 已实现 | URL 可配置；2xx 的 `outcome=duplicate` 为幂等成功，409 内容冲突会停止回放 |
-| 统一 ingestion API | 等待后端接线 | 当前仓库尚无 `/api/v1/ingestion/items` 实际路由 |
+| HTTP 投递 | 已实现 | URL 可配置并发送 Bearer token；2xx 的 `outcome=duplicate` 为幂等成功，409 内容冲突会停止回放 |
+| 统一 ingestion API | 后端源码已实现 | `/api/v1/ingestion/items` 已挂载；本次尚未完成真实数据库回放联调 |
 | 事件/评分/Agent | 不在本目录实现 | 必须复用后端统一流水线 |
 
 ## 数据结构
@@ -51,6 +51,7 @@ GitHub 仓库页和能源场景知乎文章。全部场景均明确标记 `marke
 ```powershell
 npm run demo:list
 npm run demo:convert
+npm run lint:demo
 npm run test:demo
 ```
 
@@ -61,8 +62,19 @@ uv run --project demo python demo/src/risktrace_demo_cli.py replay deepseek-r1 `
   --dry-run --interval-ms 1 --no-checkpoint
 ```
 
-后端统一 ingestion 路由落地后，可将 `--dry-run` 替换为
-`--endpoint <统一接入接口 URL>`。在实际路由出现并完成联调前，不能把 HTTP 端到端接入标记为已验证。
+真实投递前配置与后端一致的 token，并确保 provider 在后端允许列表中：
+
+```powershell
+$env:RISKTRACE_INGESTION_API_TOKEN = "<本地接入 token>"
+uv run --project demo python demo/src/risktrace_demo_cli.py replay deepseek-r1 `
+  --endpoint http://127.0.0.1:8000/api/v1/ingestion/items --interval-ms 1000 --reset
+```
+
+HTTP 客户端已与当前路由契约对齐；在迁移、数据库和 API 实际启动并完成回放前，不能把端到端
+接入标记为已验证。
+
+`npm run demo:list` 会列出每个场景实际使用的 provider；启动 API 前，应把目标场景的这些值加入
+`RISKTRACE_INGESTION_ALLOWED_PROVIDERS`。不应使用 `*` 绕过服务账号的来源范围。
 
 `convert --strict` 在存在 rejected 记录时返回退出码 2，适合数据质量门禁；普通 `convert` 会保留
 rejected 明细并继续产出其余合法记录。
@@ -77,13 +89,14 @@ rejected 明细并继续产出其余合法记录。
 日期统一按 Asia/Shanghai 解读后转换为 UTC。仅日期的记录规范到本地当日 00:00，同时保留
 `published_at_precision=date`；人工审核过的推断日期额外标记 `published_at_inferred=true` 和依据。
 
-`external_id` 由承载平台、URL 和原始标题稳定派生；HTTP 请求同时发送 `Idempotency-Key`。
+`external_id` 由承载平台和规范来源 URL 稳定派生；HTTP 请求同时发送 `Idempotency-Key`。
 checkpoint 只记录下一条 cursor，不删除或修改已被后端接收的原始数据，因此 reset/replay 依赖统一
 ingestion API 的幂等约束。
 
 ## 投递契约
 
-投递载荷只包含来源事实：`external_id`、`source`、四类时间、标题、正文、URL 和采集元数据。
+投递载荷只包含来源事实：`external_id`、`source`、发布时间/采集时间/回放时间、标题、正文、URL
+和采集元数据。`received_at` 由服务端生成，不属于客户端载荷。
 不得加入 `tenant_id`、`event_id`、`sentiment`、`risk` 或 `topic`。固定 Demo tenant 由服务端上下文
 决定；事件和评分由统一规则链生成。
 

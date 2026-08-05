@@ -42,7 +42,7 @@ class RecordSink(Protocol):
     ) -> DeliveryReceipt: ...
 
 
-Transport = Callable[[str, bytes, float, str], TransportResponse | int]
+Transport = Callable[[str, bytes, float, str, str], TransportResponse | int]
 
 
 class HttpIngestionSink:
@@ -50,6 +50,7 @@ class HttpIngestionSink:
         self,
         endpoint: str,
         *,
+        bearer_token: str,
         timeout_seconds: float = 10.0,
         max_attempts: int = 3,
         backoff_seconds: float = 0.25,
@@ -64,7 +65,10 @@ class HttpIngestionSink:
             raise ValueError("max_attempts must be positive")
         if backoff_seconds < 0:
             raise ValueError("backoff_seconds must not be negative")
+        if not bearer_token.strip():
+            raise ValueError("ingestion bearer token is required")
         self.endpoint = endpoint
+        self.bearer_token = bearer_token.strip()
         self.timeout_seconds = timeout_seconds
         self.max_attempts = max_attempts
         self.backoff_seconds = backoff_seconds
@@ -94,6 +98,7 @@ class HttpIngestionSink:
                     body,
                     self.timeout_seconds,
                     record.external_id,
+                    self.bearer_token,
                 )
                 if isinstance(response, int):
                     response = TransportResponse(response)
@@ -156,11 +161,13 @@ def _post_json(
     body: bytes,
     timeout_seconds: float,
     idempotency_key: str,
+    bearer_token: str,
 ) -> TransportResponse:
     request = Request(
         endpoint,
         data=body,
         headers={
+            "Authorization": f"Bearer {bearer_token}",
             "Content-Type": "application/json; charset=utf-8",
             "Idempotency-Key": idempotency_key,
         },

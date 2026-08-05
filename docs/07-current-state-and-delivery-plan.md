@@ -4,8 +4,9 @@
 
 本文把当前仓库实现与产品、架构、数据、工作台和 Agent 文档交叉比对，回答两个问题：RiskTrace 现在真实完成了什么，以及怎样形成第一条可演示、可验证的业务闭环。
 
-> 当前实现说明：固定场景 importer、事件/证据只读 API、事件规则内核和 Rule 3/4 纯算法已经落库；
-> 但自动导入到事件引擎、评分持久化调度和前端工作台仍未接线。规则单元测试不能替代端到端验收。
+> 当前实现说明：固定场景 importer、统一原始数据写入 API、事件/证据只读 API、事件规则内核和 Rule 3/4 纯算法已经落库；
+> 前端事件总览、工作台和证据抽屉也已读取真实只读 API；但真实 Source Adapter、接入后的
+> enrichment/事件引擎编排和评分持久化调度仍未接线，浏览器尚未连接真实数据库完成运行验收。
 
 评估基线为当前 `main` 与本工作区。百分比是用于排序的阶段性判断，不是测试覆盖率、里程碑验收率或工时进度。
 
@@ -14,11 +15,13 @@
 
 ## 1. 当前阶段结论
 
-RiskTrace 不是空壳。仓库已有双应用结构、真实依赖就绪检查、固定场景导入器、只读业务 API、事件规则、Rule 3/4 评分内核和追溯迁移；它仍不能称为 MVP 产品，因为这些后端能力尚未串成浏览器可操作的研究闭环。
+RiskTrace 不是空壳。仓库已有双应用结构、统一写入、只读业务 API、事件规则、Rule 3/4 评分内核、
+追溯迁移和真实 API 驱动的前端工作台；它仍不能称为 MVP 产品，因为数据接入后的 Rule 1-4
+持久化流水线尚未串起，页面也尚未完成真实数据库运行验收。
 
 更准确的定性是：
 
-> 后端纵向切片已形成若干段，浏览器端产品闭环尚未形成。
+> 前后端纵向切片已经形成若干段，接入到规则与评分的运行闭环尚未形成。
 
 阶段性完成度可按以下口径理解：
 
@@ -26,12 +29,12 @@ RiskTrace 不是空壳。仓库已有双应用结构、真实依赖就绪检查�
 | --- | ---: | --- | --- |
 | 工程基础设施 | 70% | Next.js、FastAPI、Compose、PostgreSQL、Redis、MinIO、Alembic、检查入口均已落库 | 指工程基线完成度，不代表完整栈已在本次评估中运行验证 |
 | 数据模型 | 70% | 已有 RawDocument、Event、Evidence、Opinion、Transmission、Metric 与 ScoreCalibration | EventTag、AnalysisSnapshot、Report 和 Alert 尚未落库 |
-| 业务后端 | 45% | 固定 importer、只读业务 API、Rule 1/2/3/4 与生命周期纯规则已实现 | 自动导入、持久化编排、后台调度和写入 API 尚未形成 |
-| 研究工作台 UI | 5% | 首页只展示真实平台状态和系统边界 | 风险总览、事件工作台、时间线和证据抽屉尚未实现 |
+| 业务后端 | 45% | 固定 importer、统一写入与只读业务 API、Rule 1/2/3/4 与生命周期纯规则已实现 | 真实 Adapter、enrichment、规则持久化编排和后台调度尚未形成 |
+| 研究工作台 UI | 45% | 事件总览、工作台、评分、时间线、观点/传导只读视图和证据抽屉已读取真实 API | 真实数据库运行验收、EventTag、Snapshot、报告、影响矩阵、告警和导出尚未完成 |
 | Agent / LLM | 0% | Agent 1/2 仅有设计与预留依赖；旧独立 Agent 执行入口已移除 | 依赖可用性不计为产品能力 |
-| 完整 Demo 闭环 | 15–20% | 后端可导入固定场景并查询事件/证据，Web 仍只显示基础设施状态 | 尚不能从浏览器演示消息如何转化为研究结果 |
+| 完整 Demo 闭环 | 25–30% | 来源转换、回放、统一写入、只读 API 和 Web 各段已实现 | `pending_enrichment` 尚未进入 Rule 1-4，真实回放也未完成浏览器端到端验收 |
 
-整体约为 35–40%，只适合作为方向性判断。后续不再以仓库文件数、第三方源码量或基础设施组件数衡量产品完成度，而以端到端验收场景是否成立衡量。
+整体约为 40–45%，只适合作为方向性判断。后续不再以仓库文件数、第三方源码量或基础设施组件数衡量产品完成度，而以端到端验收场景是否成立衡量。
 
 ## 2. 已经做对的事情
 
@@ -72,15 +75,18 @@ Source Adapters
 
 ### 2.3 追溯模型先于语义层落地
 
-当前 ORM 和第一份迁移真实包含：
+当前 ORM 和迁移链真实包含：
 
 - `RawDocument`
 - `Event`
 - `Entity`
 - `EventDocument`
 - `EvidenceLink`
+- `IngestionReceipt`
+- `SourceCheckpoint`
+- `SourceHealth`
 
-`RawDocument` 已覆盖来源、发布时间、采集时间、作者哈希、原文、互动、采集方式、许可范围、内容哈希和原始载荷引用；`(platform, source_id)` 有唯一约束。这为以下链路提供了数据库基础：
+`RawDocument` 已覆盖来源层级、发布时间、采集/接收/回放时间、作者哈希、原文、互动、采集方式、许可范围、内容哈希和原始载荷引用；`(tenant_id, platform, source_id)` 有唯一约束。每次成功或重复投递追加独立 receipt，不原地覆盖原始记录。这为以下链路提供了数据库基础：
 
 ```text
 研究结论
@@ -89,19 +95,19 @@ Source Adapters
   → 原始帖子 / 新闻 / 公告
 ```
 
-当前可以称为“追溯数据结构和只读查询已实现”，不能称为“证据下钻产品已实现”，因为前端入口和交互仍不存在。
+当前可以称为“追溯数据结构、只读查询和证据下钻前端源码已实现”，不能称为“证据下钻产品已运行验证”，因为尚未连接真实数据库完成浏览器验收。
 
 ## 3. 与既有文档的交叉比对
 
 | 主题 | 既有文档已定义 | 代码已实现 | 当前缺口 | 结论 |
 | --- | --- | --- | --- | --- |
-| 产品形态 | 桌面 Web Demo，移动端只做轻入口 | Next.js 首页和 FastAPI 单体 | 业务页面、通知 | 方向一致，产品入口尚未形成 |
+| 产品形态 | 桌面 Web Demo，移动端只做轻入口 | Next.js 事件总览/工作台和 FastAPI 单体 | 运行验收、通知 | 产品入口源码已形成，完整链路尚未验证 |
 | 基础设施 | PostgreSQL、Redis、对象存储、Compose | 编排、配置和真实就绪探测 | 本评估未重跑完整 Compose；第三方文档仍记录部分构建未验证 | 已定义并部分实现，运行状态需逐次验证 |
-| 原始数据契约 | 四类来源、统一 `RawDocument`、UTC、来源许可 | ORM、迁移与固定 seed importer 已有主要字段和幂等检查 | 合规 fixture schema、拒绝记录、通用 Adapter 和来源降级 | 固定回放基础已存在，通用接入未完成 |
-| 幂等与去重 | cursor/checkpoint、精确与近似去重 | importer 检查来源键/content hash，规则层有精确与近似去重 | cursor、duplicate group 持久化和传播链 | 当前只覆盖固定场景，不等于生产流水线幂等 |
+| 原始数据契约 | 四类来源、统一 `RawDocument`、UTC、来源许可 | 严格 SourceRecord、统一写入 API、ORM、迁移与固定 seed importer 已实现 | 合规真实 Adapter、拒绝记录和调度 | 接入落库源码已完成，本次未做数据库运行验证 |
+| 幂等与去重 | cursor/checkpoint、精确与近似去重 | 租户级来源键、content hash、追加 receipt、checkpoint 表和规则层去重已实现 | Adapter 批次原子性、duplicate group 持久化和传播链 | 写入边界已落库，生产采集流水线仍未形成 |
 | Event | 聚类、热度、状态机、历史回放同引擎 | Event 表、复合匹配、聚类中心、热度、确认与生命周期纯规则 | 消息到规则再到数据库的运行编排 | Event Engine 内核已实现，端到端未接线 |
-| 研究工作台 | 总览、时间线、观点、传导、影响矩阵、证据 | 首页仅展示平台就绪状态 | 全部业务视图和交互 | #003 先交付总览、最小工作台和证据抽屉 |
-| 业务 API | `/api/events`、`/{id}/workspace`、`/{id}/evidence` 等 | 事件、工作台聚合、证据、文档及结构化分析只读查询已实现 | 评分查询、写入流程与前端消费 | 既有契约已开始落地，不另造平行接口体系 |
+| 研究工作台 | 总览、时间线、观点、传导、影响矩阵、证据 | 总览、工作台、文档量时间线、评分、观点/传导只读展示和证据抽屉 | EventTag、影响矩阵、Snapshot、报告、告警、导出和运行验收 | 已消费真实契约，未生成内容不使用 mock |
+| 业务 API | `/api/events`、`/{id}/workspace`、`/{id}/evidence` 等 | 统一写入、事件/评分摘要、工作台、证据、文档及结构化分析只读查询已实现并被前端消费 | enrichment/规则写入流程、Snapshot 与报告 API | 原始接入与下游权威处理明确分层 |
 | 风险评分 | Rule 3 版本化确定性评分、Rule 4 后验校准与 `calculation_id` | `deterministic-scoring-v1`、`score-calibration-v1`、迁移和测试已实现 | 真实特征映射、持久化调用、API/UI 和历史回放 | 算法内核已实现，不等于业务评分已运行 |
 | Agent / LLM | Agent 1 事件标签、Agent 2 观点归因/传导假设/报告及严格证据校验 | 第三方依赖、Opinion/Transmission 数据结构和只读查询 | Agent 1/2 调用、schema 校验、降级、Snapshot 与评估 | 旧独立 Agent 写入入口已移除，按新顺序实现 |
 | Demo 访问模型 | 服务端固定 Demo 上下文，不做角色系统 | 所有业务查询使用服务端固定 tenant 过滤 | 写操作审计和未来真实租户上下文 | Demo 不实现登录、角色和权限后台 |
@@ -128,17 +134,24 @@ Source Adapters
 下一条必须证明的产品链是：
 
 ```text
-historical_event.jsonl
-  → RawDocument schema 校验
-  → 幂等导入 / 精确去重
-  → 已知历史 Event 与文档关联
-  → 事件列表 / 时间线 API
+SourceRecord JSONL
+  → DemoReplayProvider
+  → Unified Ingestion API / RawDocument / IngestionReceipt
+  → Rule 1 事件归类
+  → Rule 2 DROP / WAIT / ADMIT / ATTACH
+  → Event
+  → Rule 3 raw_score
+  → Rule 4 calibrated_score / confidence / score_interval
+  → 事件列表 / 工作台 / 证据 API
   → Risk Overview
   → Event Workspace
   → Evidence Drawer
 ```
 
 ## 5. `#003`：Historical Replay & Evidence Slice
+
+当前源码状态：来源转换、固定场景 importer、只读 API 和对应前端已经实现；本节验收门槛中的
+真实数据库导入、重复导入和浏览器证据下钻仍需运行验证。
 
 ### 5.1 目标
 
@@ -156,7 +169,7 @@ historical_event.jsonl
 #### 导入与幂等
 
 - 提供一个明确的导入入口和汇总结果：读取数、写入数、重复数、拒绝数。
-- `(platform, source_id)` 作为来源级幂等键；`content_hash` 用于发现跨 ID 内容重复，不直接覆盖原始记录。
+- `(tenant_id, platform, source_id)` 作为来源级幂等键；`content_hash` 用于发现跨 ID 内容重复，不直接覆盖原始记录。
 - 同一 fixture 连续导入两次，第二次不得新增 `RawDocument`、`Event` 或重复关联。
 - `#003` 允许由 fixture 的显式场景标识创建一个已知 Event；页面必须标记为“历史回放”。
 
@@ -276,12 +289,16 @@ historical_event.jsonl
 
 - 完整 Compose 和 vendored 依赖的构建状态具有环境依赖，执行每个切片前仍需现场预检，不能沿用旧结论。
 - 当前 `RawDocument.tenant_id` 可空，而其他业务对象多数不可空；Demo 导入可以使用固定 demo tenant/context，不应临时用空值绕过后续边界。
-- `(platform, source_id)` 是全局唯一约束；Demo 阶段先按固定数据集处理，未来多租户共享原始文档时再单独设计。
+- 统一接入只实现单个配置化 Bearer 服务账户；生产级服务账户管理、token 轮换、细粒度 scope 和完整审计仍未实现。
+- 第六个迁移和 PostgreSQL `ON CONFLICT` 并发幂等本次未做真实数据库验证，当前结论仅为源码与 Lint 已完成。
 - 现有 Event 状态枚举多于 `#004` 首版状态机；未启用状态必须保持不可达或有明确转换规则。
 - 当前第三方源码显著放大仓库体积和依赖面；在形成产品闭环前继续 vendoring 会增加维护、许可证和供应链审查成本，却不会提高演示完成度。
 
 ## 12. 下一步唯一优先事项
 
-下一次业务开发应完成 Historical Replay & Evidence Slice 的剩余部分：把合规 fixture、现有 importer/只读 API 与 Risk Overview、Event Workspace、Evidence Drawer 接成浏览器可下钻链路。完成之前不接 LLM、不新增基础设施，也不以静态 mock 页面替代真实导入与证据查询。
+下一次业务开发应先在真实 PostgreSQL 上完成迁移、统一接入幂等和浏览器证据下钻验证，随后把
+`pending_enrichment` 按顺序接入 Rule 1、Rule 2、Event、Rule 3 和 Rule 4 持久化。完成这条确定性
+链路之前不接 Agent，不新增角色系统，也不以静态 mock 替代真实处理结果。
 
-当评委能看到一个历史事件逐步出现、点击时间桶查看真实来源文档，并理解“这些数量从哪里来”时，RiskTrace 才第一次从工程仓库变成可解释的产品。
+当评委能看到一条历史 SourceRecord 经统一入口形成 Event 和可追溯评分，并在工作台点击证据回到
+真实来源时，RiskTrace 才第一次形成可解释的产品闭环。

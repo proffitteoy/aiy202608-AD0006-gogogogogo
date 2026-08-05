@@ -15,8 +15,10 @@ FastAPI 模块化后端。当前实现提供存活/就绪检查、基础设施�
 
 Sentence Transformers 通过惰性适配器接入；必须显式提供本地模型路径或可取得的模型名。
 仓库不附带模型权重。pgvector 用于保存事件中心和按租户检索候选事件。当前已有固定 seed
-导入和服务端固定 Demo tenant 的只读业务 API，但自动采集、事件引擎/Rule 3/4 持久化编排、
-Celery 调度和前端工作台仍未接线。Agent 1/2 也尚未实现。
+导入和服务端固定 Demo tenant 的只读业务 API。`POST /api/v1/ingestion/items` 已提供
+Bearer 服务账户写入：服务端决定 tenant 和 provider scope，按来源 ID 幂等保存 `RawDocument`，
+每次投递追加 `IngestionReceipt`。接入响应固定为 `pending_enrichment`；自动采集 Adapter、
+事件引擎/Rule 3/4 持久化编排、Celery 调度和前端工作台仍未接线。Agent 1/2 也尚未实现。
 
 Celery、Sentence Transformers、Pydantic AI Slim 与 Pydantic Graph 的上游实现保存在 `vendor/`，`uv.lock` 使用本地路径源；安装和容器构建不依赖根目录的 `第三方库`。
 
@@ -27,3 +29,7 @@ uv sync --project apps/api
 uv run --project apps/api alembic -c apps/api/alembic.ini upgrade head
 npm run dev:api
 ```
+
+写接口运行前必须配置 `RISKTRACE_INGESTION_API_TOKEN`、`RISKTRACE_INGESTION_TENANT_ID`
+和 `RISKTRACE_INGESTION_ALLOWED_PROVIDERS`。请求体不能携带 tenant、event、sentiment、topic
+或 risk 等下游权威字段；完整示例见根 `README.md`。

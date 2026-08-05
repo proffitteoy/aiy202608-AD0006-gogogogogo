@@ -21,6 +21,7 @@ RiskTrace 当前采用一个仓库、两个应用的轻量结构，不拆分微�
 | --- | --- | --- |
 | `apps/web/src/app` | 页面、同源 API 代理与视觉状态 | 计算权威风险分数、暴露服务密钥 |
 | `apps/api/src/risktrace/api` | HTTP 路由与输入输出契约 | 直接堆积业务规则或数据库细节 |
+| `apps/api/src/risktrace/ingestion` | 严格 SourceRecord、租户级幂等存储、接收回执与来源运行状态仓储 | 做情绪判断、事件归因、风险评分或信任请求体 tenant |
 | `apps/api/src/risktrace/core` | 配置和基础设施健康检查 | 承载金融语义判断 |
 | `apps/api/src/risktrace/db` | SQLAlchemy 元数据与持久化模型 | 绕过固定 Demo 上下文或后续租户边界 |
 | `apps/api/src/risktrace/events` | 事件准入、匹配、去重、指标与生命周期纯规则 | 发起网络调用、信任 LLM 直接裁决或隐藏缺失因子 |
@@ -42,17 +43,18 @@ RiskTrace 当前采用一个仓库、两个应用的轻量结构，不拆分微�
 - 事件规则内核已实现 `event-match-v1`、`admission-v2`、`confirmation-v2`、`deterministic-scoring-v1` 和生命周期规则，并有单元测试。
 - 第四个迁移保留 `OpinionRecord` 与 `TransmissionEdge` 结构化对象；旧的独立 Agent 写入入口已退出 API。
 - 第五个迁移把 Rule 2 字段校准为 `decision_value`，并新增 Rule 4 校准记录；`score-calibration-v1` 可纯函数复算，但尚未接入业务调度。
+- 第六个迁移增加统一接入字段、租户级来源唯一键、追加式 `ingestion_receipts`、`source_checkpoints` 和 `source_health`；`POST /api/v1/ingestion/items` 已实现 Bearer principal、provider scope 和 `pending_enrichment` 响应。
 - 事件、工作台聚合、证据、文档、观点和传导只读 API 已存在，并由服务端固定 Demo tenant 过滤。
+- Web 已实现事件总览、事件工作台、Rule 3/4 评分读取、文档量时间线、观点/传导只读展示和证据抽屉；缺失产物显示 unavailable/degraded，不使用本地 mock。
 - Sentence Transformers 适配器只在显式配置模型后惰性加载；仓库没有模型权重，当前应用启动不会隐式下载模型。
 
 ## 4. 尚未实现
 
-- 生产级登录、RBAC 与真实多租户上下文。
-- 合规历史 fixture、通用 Adapter、cursor/checkpoint、拒绝记录和来源降级流水线；当前只有固定 seed importer。
-- 历史导入或实时消息到事件引擎的持久化调用路径，以及 Celery 指标调度。
+- 合规真实 Source Adapter、采集调度、拒绝记录和来源降级运行编排；checkpoint 与来源健康的存储结构已存在，但尚无调度方驱动。
+- 统一 ingestion 的 `pending_enrichment` 到事件引擎的持久化调用路径，以及 Celery 指标调度。
 - Evidence 到 Rule 3/4 输入的数值映射、Data Completeness 聚合与 AnalysisSnapshot。
-- Rule 3/4 的业务 API、前端页面与实时推送；当前纯规则模块并不等于端到端自动评分已运行。
-- 风险总览、事件工作台和证据检索业务页面。
+- Rule 3/4 的自动计算/持久化调度与实时推送；只读 API 和前端展示并不等于自动评分已运行。
+- 影响矩阵、EventTag、AnalysisSnapshot、报告、告警和导出页面。
 - Agent 1 Event Tagger、Agent 2 Analyze/Render、报告和人工审核闭环。
 
 Demo 业务查询已经使用服务端固定 demo context，前端不能传入任意 `tenant_id` 改变数据范围。Demo 不实现登录、角色、成员管理或权限后台；生产级认证和真实多租户隔离留到企业化阶段。
@@ -65,3 +67,6 @@ Demo 业务查询已经使用服务端固定 demo context，前端不能传入�
 4. 运行验证：完整 Compose 启动后，同时检查 Web HTML、静态资源、API 存活与 API 就绪。
 
 单独通过其中一层不能替代完整运行验证。
+
+统一接入当前已通过 schema/service/API 契约单元测试，尚未执行 PostgreSQL 迁移、并发幂等或 HTTP
+端到端验证。前端已经通过静态检查和生产构建，但仍需连接真实数据库做浏览器运行验收。

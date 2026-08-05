@@ -181,6 +181,7 @@ Agent 只能解释冻结的 Rule 3/4 结果，不能提出或写入任何覆盖 
 
 | 接口 | 用途 |
 | --- | --- |
+| POST /api/v1/ingestion/items | 服务账户提交严格 SourceRecord，幂等写入原始文档并返回接收回执 |
 | GET /api/events | 风险总览事件列表 |
 | GET /api/events/{id}/workspace | 事件工作台聚合数据 |
 | GET /api/events/{id}/evidence | 证据筛选 |
@@ -192,7 +193,7 @@ Agent 只能解释冻结的 Rule 3/4 结果，不能提出或写入任何覆盖 
 
 ## 14. 数据与模型可追溯要求
 
-- 原始数据保存 source_id、source_url、published_at、collected_at、collection_method。
+- 原始数据保存 source_id、source_url、published_at、collected_at、received_at、可选 replay_at、collection_method 和 license_scope；每次投递另存 ingestion receipt。
 
 - 模型输出保存 model_version、prompt_version、输入集合与输出 JSON。
 
