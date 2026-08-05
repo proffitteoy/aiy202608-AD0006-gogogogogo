@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import { ScoreBadge } from "@/components/overview/ScoreBadge";
 import { ReportLaunchButton } from "@/components/workbench/ReportLaunchButton";
 import {
@@ -21,10 +19,6 @@ export function WorkbenchHeader({ detail, sourceCount }: Props) {
   return (
     <header className={styles.header}>
       <div className={styles.left}>
-        <Link href="/" className={styles.back} aria-label="返回总览">
-          ← 返回
-        </Link>
-
         <div className={styles.titleBlock}>
           <div className={styles.crumbs}>
             <ScoreBadge score={detail.score} />
