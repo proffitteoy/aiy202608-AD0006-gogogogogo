@@ -5,9 +5,9 @@ from risktrace.events.schemas import AdmissionDecision, LifecycleStatus
 
 
 def initial_status_for(decision: AdmissionDecision) -> LifecycleStatus | None:
-    if decision is AdmissionDecision.CANDIDATE:
+    if decision is AdmissionDecision.WAIT:
         return LifecycleStatus.CANDIDATE
-    if decision is AdmissionDecision.CREATE:
+    if decision is AdmissionDecision.ADMIT:
         return LifecycleStatus.CONFIRMED
     return None
 

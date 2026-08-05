@@ -2,14 +2,11 @@
   position: relative;
   display: block;
   padding: var(--space-4) var(--space-5) var(--space-4) calc(var(--space-5) + 6px);
+  overflow: hidden;
   background: var(--surface-1);
   border: 1px solid var(--border-subtle);
   border-radius: 6px;
-  overflow: hidden;
-  transition:
-    background var(--dur-fast) var(--ease-out-expo),
-    border-color var(--dur-fast) var(--ease-out-expo),
-    transform var(--dur-fast) var(--ease-out-expo);
+  transition: background var(--dur-fast), border-color var(--dur-fast), transform var(--dur-fast);
 }
 
 .card:hover {
@@ -18,32 +15,13 @@
   transform: translateX(2px);
 }
 
-.card:hover .rail {
-  transform: scaleX(1.67);
-}
-
 .rail {
   position: absolute;
   top: 0;
   bottom: 0;
   left: 0;
   width: 3px;
-  transform-origin: left;
-  transition: transform var(--dur-fast) var(--ease-out-expo);
-}
-
-.high .rail {
-  background: var(--risk-high);
-}
-.mid .rail {
-  background: var(--risk-mid);
-}
-.low .rail {
-  background: var(--risk-low);
-}
-
-.high {
-  background: color-mix(in oklch, var(--surface-1) 88%, var(--risk-high) 12%);
+  background: var(--accent);
 }
 
 .head {
@@ -53,18 +31,19 @@
   margin-bottom: var(--space-2);
 }
 
+.status {
+  padding: 1px 6px;
+  color: var(--text-secondary);
+  font-size: var(--text-caption);
+  background: var(--surface-3);
+  border-radius: 3px;
+}
+
 .time {
+  margin-left: auto;
   color: var(--text-tertiary);
   font-family: var(--font-mono);
   font-size: var(--text-body-s);
-}
-
-.stale {
-  padding: 2px 6px;
-  color: var(--risk-mid);
-  font-size: var(--text-caption);
-  background: var(--risk-mid-bg);
-  border-radius: 3px;
 }
 
 .title {
@@ -74,18 +53,14 @@
   font-size: var(--text-h3);
   font-weight: 500;
   line-height: var(--leading-tight);
-  letter-spacing: -0.01em;
-}
-
-.high .title {
-  font-size: 20px;
+  letter-spacing: 0;
 }
 
 .meta {
   display: flex;
   gap: var(--space-2);
   align-items: baseline;
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-4);
   color: var(--text-secondary);
   font-size: var(--text-body-s);
 }
@@ -94,63 +69,42 @@
   color: var(--text-tertiary);
 }
 
-.footer {
-  display: flex;
-  gap: var(--space-5);
-  align-items: center;
-  justify-content: space-between;
+.scores {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
 }
 
-.spark {
-  flex-shrink: 0;
-  opacity: 0.9;
+.scores span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
-.metrics {
-  display: flex;
-  gap: var(--space-4);
-  align-items: baseline;
+.scores small {
   color: var(--text-tertiary);
-  font-size: var(--text-body-s);
+  font-size: var(--text-caption);
 }
 
-.metric strong {
+.scores strong {
+  overflow: hidden;
   color: var(--text-primary);
   font-family: var(--font-mono);
-  font-weight: 500;
-}
-
-.heat {
-  display: inline-flex;
-  gap: 2px;
-  align-items: center;
-  font-family: var(--font-mono);
+  font-size: var(--text-body);
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.heatUp {
-  color: var(--risk-high);
-}
+@media (max-width: 640px) {
+  .scores {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 
-.heatDown {
-  color: var(--risk-low);
-}
-
-/* 低风险卡：压缩形态 */
-.low {
-  padding-top: var(--space-3);
-  padding-bottom: var(--space-3);
-}
-
-.low .title {
-  margin-bottom: var(--space-2);
-  font-size: var(--text-body-l);
-}
-
-.low .meta {
-  display: none;
-}
-
-.low .footer {
-  justify-content: flex-end;
+  .meta {
+    flex-wrap: wrap;
+  }
 }

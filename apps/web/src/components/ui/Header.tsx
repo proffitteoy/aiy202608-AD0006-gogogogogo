@@ -4,13 +4,13 @@ import styles from "./Header.module.css";
 
 type Props = {
   activeEventCount?: number;
-  highRiskCount?: number;
+  scoredEventCount?: number;
   now?: Date;
 };
 
 export function Header({
   activeEventCount = 0,
-  highRiskCount = 0,
+  scoredEventCount = 0,
   now = new Date(),
 }: Props) {
   const timestamp = formatDateTime(now.toISOString());
@@ -39,9 +39,9 @@ export function Header({
           ·
         </span>
         <span className={styles.metaCell}>
-          高风险{" "}
-          <strong className={styles.highRisk} data-numeric>
-            {highRiskCount}
+          已校准{" "}
+          <strong data-numeric>
+            {scoredEventCount}
           </strong>
         </span>
       </div>

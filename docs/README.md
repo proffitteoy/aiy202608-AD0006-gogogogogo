@@ -14,6 +14,7 @@
 - [06｜开源组件落库边界](06-third-party-components.md)
 - [07｜当前状态评估与纵向交付计划](07-current-state-and-delivery-plan.md)
 - [自动事件聚类与热点计算设计](自动事件聚类热点计算设计.md)
+- [Rule 4 后验评分校准设计](Rule4后验评分校准设计.md)
 
 | 关键决策：产品目标不是预测股价，而是把“突发事件发生后人工浏览海量信息”的研究流程压缩为可追溯的事件识别、观点归因、传导假设与风险优先级判断。 |
 | --- |
@@ -34,14 +35,16 @@
 
 - 不在 MVP 同时开发原生 Android、iOS、Windows 和 macOS 客户端。
 
-## 3. 目标用户与核心任务
+## 3. Demo 核心任务
 
-| 用户 | 高频任务 | 系统价值 |
-| --- | --- | --- |
-| 行业研究员 | 突发事件后快速判断影响逻辑 | 减少信息筛选和归因时间 |
-| 策略/风险研究员 | 扫描跨行业风险与情绪异常 | 统一风险雷达和证据链 |
-| 研究负责人 | 确认重大事件、分派研究、审核报告 | 团队协作与审计 |
-| 管理员 | 管理数据源、模型、权限、配额 | 可控、可追溯运行 |
+Demo 只验证一个研究者视角的端到端链路，不实现团队角色、审批流、成员管理或权限后台。
+
+| 任务 | 系统价值 |
+| --- | --- |
+| 回放历史突发事件 | 验证真实数据可以进入统一 RawDocument 和 Event 链路 |
+| 查看规则评分与后验校准 | 区分热度、风险分、置信度和数据完整度 |
+| 下钻观点、传导假设和证据 | 减少人工浏览大量帖子/新闻的时间 |
+| 导出风险卡片或结构化数据 | 形成可复核、可演示的研究交付物 |
 
 ## 4. 产品形态
 
@@ -50,7 +53,7 @@
 | 主产品 | 桌面 Web SaaS | 完整研究、下钻、对比、导出、配置 |
 | 轻入口 | 手机 Web/PWA + 企业微信/邮件等 | 重大告警与一分钟风险卡片 |
 | 集成层 | REST API / Webhook | 接入内部研究系统和机器人 |
-| 企业版 | 私有化/专有云 | 接入机构内网数据与权限体系 |
+| 企业版 | 私有化/专有云 | 接入机构内网数据、权限体系和审计要求 |
 
 ## 5. 数据源架构
 
@@ -71,15 +74,20 @@
 Source Adapters
   → Raw Store（不可变原始数据）
   → Normalization / Dedup / Quality
-  → Event Engine（聚类、热度、状态机）
-  → LLM Semantic Layer（事件理解、观点归因）
-  → Aggregation & Scoring（确定性计算）
-  → Transmission Hypothesis（候选传导路径）
-  → Evidence / Rule Validation
-  → Alert Engine
-  → Research Workspace / Brief / Export
-  → Human Review Feedback
+  → Rule 1：Event Classification / Matching（事件归类）
+  → Rule 2：Admission Management（DROP / WAIT / ADMIT / ATTACH）
+  → Event（正式事件对象）
+  → Rule 3：Deterministic Scoring（确定性评分）
+  → Rule 4：Posterior Calibration（后验评分校准）
+  → Agent 1：Event Tagger（事件标签）
+  → Agent 2 Analyze：观点归因 / 传导假设 / 评分解释
+  → Evidence Validation（证据 ID、实体、结构校验）
+  → AnalysisSnapshot（冻结事件、评分、校准、标签、分析与证据）
+  → Agent 2 Render：基于 Snapshot 生成报告
+  → Workspace / Alert / Export / Human Review
 ```
+
+核心顺序是 `Rule 3/4` 先于 `Agent 1/2`。Agent 可以解释事件、生成标签、归因观点和提出传导假设，但不参与基础分数和后验校准分数的形成。
 
 ## 7. 系统分层架构
 
@@ -87,9 +95,9 @@ Source Adapters
 | --- | --- | --- |
 | 数据接入层 | Adapters、原始存储、来源健康 | 否 |
 | 数据治理层 | 清洗、去重、时间对齐、质量标签 | 否 |
-| 事件计算层 | 聚类、异常检测、热度、状态机 | 仅事件命名可辅助 |
-| 语义分析层 | 事件理解、观点抽取、传导候选、简报 | 是，但只输出候选/结构化结果 |
-| 规则评分层 | 聚合、风险公式、阈值、告警 | 否 |
+| 事件规则层 | Rule 1 事件归类、Rule 2 入库管理、状态机 | 否 |
+| 规则评分层 | Rule 3 确定性评分、Rule 4 后验校准、阈值、告警 | 否 |
+| 语义分析层 | Agent 1 事件标签、Agent 2 观点归因/传导假设/报告渲染 | 是，但只输出候选/结构化结果 |
 | 研究应用层 | 总览、工作台、证据、对比、导出 | 人工最终决策 |
 
 ## 8. 核心业务对象
@@ -98,12 +106,14 @@ Source Adapters
 | --- | --- | --- |
 | RawDocument | 原始来源文档 | document_id |
 | Event | 持续演化的事件聚类 | event_id |
+| EventTag | Agent 1 生成、经校验的事件标签 | event_tag_id |
 | OpinionRecord | 单条文本的结构化观点 | opinion_id |
 | OpinionCluster | 相似观点聚合 | opinion_cluster_id |
 | Entity | 公司/行业/商品/政策等实体 | entity_id |
 | TransmissionEdge | 候选/确认传导关系 | edge_id |
 | EvidenceLink | 结论与证据关联 | evidence_link_id |
 | Calculation | 一次可复算指标计算 | calculation_id |
+| ScoreCalibration | 后验校准分、置信度与区间 | calibration_id |
 | AnalysisSnapshot | 研究页面某时点冻结状态 | snapshot_id |
 | Alert | 规则触发告警 | alert_id |
 
@@ -112,10 +122,11 @@ Source Adapters
 ```text
 candidate
   ├─ 样本不足/降温 → archived
-  └─ 满足事件条件 → active
-        ├─ 达到分析条件 → analyzed
-        ├─ 达到告警条件 → alerted
-        └─ 长时间无新增 → cooling → closed
+  └─ 多源/高质量证据确认 → confirmed
+        └─ 热度或评分达到监控条件 → active
+              ├─ 达到分析条件 → analyzed
+              ├─ 达到告警条件 → alerted
+              └─ 长时间无新增 → cooling → closed
 ```
 
 - Event 状态由规则状态机控制；LLM 无权直接将事件设为 alerted。
@@ -149,18 +160,22 @@ candidate
 
 ## 12. 分析与评分
 
-系统至少维护以下量化因子：热度异常、净情绪、情绪分歧、观点集中度、来源质量、事实支持度、业务暴露度和传导支持度。所有最终指标由版本化公式计算。
+系统至少维护以下量化因子：事件可观测量、来源质量、扩散强度、市场相关性、潜在影响、行情反应、数据完整度、后验置信度和评分区间。Rule 3 的基础评分不得依赖 Agent 1/2 产物；Rule 4 在基础评分之上计算 `calibrated_score`、`confidence` 与 `score_interval`。
 
 ```text
-Risk(entity, event, t)
- = f(HeatAnomaly,
-     SentimentIntensity,
-     Disagreement,
-     EntityExposure,
-     FactSupport,
-     SourceQuality,
-     TransmissionSupport)
+raw_score(event, t)
+ = f(X_event,
+     X_source,
+     X_diffusion,
+     X_market)
+
+calibration(raw_score, event, evidence_state)
+ → calibrated_score, confidence, [lower_bound, upper_bound]
 ```
+
+观点归因、情绪对象和传导假设可以进入报告解释、工作台展示和人工研究流程，但不能反向写入 Rule 3/4 的权威评分输入。
+
+Agent 只能解释冻结的 Rule 3/4 结果，不能提出或写入任何覆盖 `raw_score`、`calibrated_score`、`confidence` 或评分区间的调分字段。
 
 ## 13. 关键 API
 
@@ -204,7 +219,7 @@ Risk(entity, event, t)
 | 平台 | 桌面 Web + 一个通知渠道 | 原生手机 App |
 | 数据 | 1 事实源 + 1 新闻源/历史新闻 + 1 舆情源 + 行情 | 全网实时抓取 |
 | 事件 | 历史事件实时回放 + 聚类/热度 | 复杂跨事件因果推断 |
-| Agent | 观点抽取 + 传导候选 + 简报 | 自由自治多 Agent 对话 |
+| Agent | Agent 1 事件标签 + Agent 2 观点归因/传导假设/报告生成 | 自由自治多 Agent 对话、Agent 直接给分 |
 | UI | 总览 + 事件工作台 + 证据下钻 | 复杂自定义仪表板 |
 | 输出 | 风险卡片 + CSV/JSON/HTML/PDF 其一 | 自动交易 |
 
@@ -216,31 +231,29 @@ Risk(entity, event, t)
 
 1. 完成风险总览与事件工作台骨架，确保所有数据可下钻。
 
-1. 接入 Opinion Extractor，将文本变成结构化观点并做确定性聚合。
+1. 实现 Rule 3 确定性评分和 Rule 4 后验评分校准，确保评分链在 Agent 接入前可复算。
 
-1. 接入产业链/公司知识数据和 Transmission Agent，输出候选路径。
+1. 接入 Agent 1 Event Tagger，生成可校验、可审计的事件标签。
 
-1. 实现风险评分、告警规则和来源降级。
+1. 接入 Agent 2 Analyze，将文本和知识记录转成观点归因、传导假设、评分解释和反向证据。
 
-1. 最后接 Brief Agent、导出和人工反馈闭环。
+1. 冻结 AnalysisSnapshot 后，用 Agent 2 Render 生成报告，并完成导出和人工反馈闭环。
 
 ## 18. 端到端验收场景
 
 1. 回放一个历史突发事件；系统在消息流进入后自动形成 Event。
 
-1. 事件热度异常达到规则后进入 active，并在总览出现。
+1. Rule 1 将消息归入候选事件，Rule 2 输出 DROP / WAIT / ADMIT / ATTACH 决策；多源/高质量证据确认后 Event 进入 confirmed。
 
-1. LLM 从去重文本中抽取 3–5 个主要观点，界面显示独立样本数、增速和证据。
+1. Rule 3 计算可复算 `raw_score`，Rule 4 生成 `calibrated_score`、`confidence` 和评分区间，并留下 calculation_id。
 
-1. 传导 Agent 生成至少一条 Event→Mechanism→Industry→Company 候选链，每条边可下钻证据。
-
-1. 确定性评分引擎计算行业/公司风险优先级并留下 calculation_id。
+1. Agent 1 生成事件标签；Agent 2 Analyze 输出 3–5 个主要观点归因和至少一条 Event→Mechanism→Industry→Company 候选链，每条结论可下钻证据。
 
 1. 告警规则触发并发送到一个外部渠道。
 
 1. 研究员拒绝一条错误传导边并添加备注；系统保留版本。
 
-1. 基于当前 snapshot 生成一份风险卡片；其中所有数字和事实均可追溯。
+1. 基于当前 snapshot 生成一份风险卡片；其中所有数字来自冻结评分字段，所有事实句均可追溯。
 
 ## 19. 四份专项文档之间的依赖
 
@@ -253,4 +266,4 @@ Risk(entity, event, t)
 
 ## 20. 第一阶段成功标准
 
-第一阶段不是以“模型准确预测股票”为成功，而是证明以下流程成立：面对一个突发事件，研究员不再人工浏览数百条帖子和新闻，而能在统一工作台中快速看到主导观点、情绪对象、传导候选、影响对象和原始证据，并能对机器结论进行修正、复核和导出。
+第一阶段不是以“模型准确预测股票”为成功，而是证明以下流程成立：面对一个突发事件，研究员不再人工浏览数百条帖子和新闻，而能在统一工作台中快速看到规则评分、后验校准、主导观点、传导候选、影响对象和原始证据，并能对机器结论进行修正、复核和导出。

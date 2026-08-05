@@ -40,4 +40,10 @@ exports/
 .DS_Store
 Thumbs.db
 
+# External reference repositories
+MediaCrawler-main/
+RSSHub-master/
+a-stock-data-main/
+snowball-cli-main/
+
 \第三方库

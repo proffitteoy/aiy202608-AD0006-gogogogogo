@@ -176,6 +176,21 @@
   justify-content: space-between;
 }
 
+.attributes {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.attributes span {
+  padding: 2px 6px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  background: var(--surface-3);
+  border-radius: 2px;
+}
+
 .source {
   color: var(--text-tertiary);
   font-size: var(--text-caption);

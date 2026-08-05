@@ -13,7 +13,7 @@ from risktrace.events.schemas import (
 
 @dataclass(frozen=True, slots=True)
 class EventEngine:
-    """Runs matching before deterministic admission; it never delegates decisions to an LLM."""
+    """Runs Rule 1 matching before Rule 2 admission without delegating to an LLM."""
 
     admission_policy: AdmissionPolicy = field(default_factory=AdmissionPolicy)
     matching_policy: MatchingPolicy = field(default_factory=MatchingPolicy)
@@ -39,10 +39,11 @@ class EventEngine:
         admission = self.admission_policy.evaluate(
             AdmissionInputs(
                 market_relevance=claim.market_relevance,
-                eventness=claim.eventness,
+                state_change_strength=claim.state_change_strength,
                 potential_impact=claim.potential_impact,
                 novelty=novelty,
                 source_quality=claim.source_quality,
+                data_completeness=claim.data_completeness,
             ),
             attached_match=attached_match,
         )

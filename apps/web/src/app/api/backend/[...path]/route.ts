@@ -8,8 +8,7 @@ import { getApiBaseUrl } from "@/lib/api/client";
  * 用途：客户端组件只跟自身同源交互，避免 CORS，同时不把后端地址暴露到浏览器。
  */
 
-const FORWARDED_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
-type Method = (typeof FORWARDED_METHODS)[number];
+type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 async function forward(request: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
   const { path } = await ctx.params;

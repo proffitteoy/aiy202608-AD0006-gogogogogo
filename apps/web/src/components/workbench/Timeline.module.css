@@ -6,6 +6,18 @@
   min-height: 240px;
 }
 
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 180px;
+  color: var(--text-tertiary);
+  background: var(--surface-2);
+  border: 1px dashed var(--border-strong);
+  border-radius: 4px;
+}
+
 .chart {
   flex: 1;
   width: 100%;

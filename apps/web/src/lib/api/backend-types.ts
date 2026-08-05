@@ -18,8 +18,25 @@ export type BackendEventSummary = {
   document_count: number;
   source_breakdown: Record<string, number>;
   latest_activity: string | null;
+  score: BackendEventScore;
   created_at: string;
   updated_at: string;
+};
+
+export type BackendEventScore = {
+  status: "complete" | "degraded" | "unavailable";
+  raw_score: number | null;
+  calibrated_score: number | null;
+  confidence: number | null;
+  score_interval: {
+    lower_bound: number;
+    upper_bound: number;
+  } | null;
+  scoring_version: string | null;
+  calibration_version: string | null;
+  calculation_id: string | null;
+  score_calculation_id: string | null;
+  degradation_reasons: string[];
 };
 
 export type BackendTimelineBucket = {
@@ -50,9 +67,12 @@ export type BackendEvidenceItem = {
   source_type: string;
   platform: string;
   published_at: string;
+  collected_at: string;
   source_url: string | null;
   engagement: Record<string, unknown> | null;
   raw_text_preview: string;
+  collection_method: string;
+  license_scope: string;
 };
 
 export type BackendOpinionItem = {
@@ -74,6 +94,8 @@ export type BackendTransmissionEdge = {
   from_node_id: string;
   to_node_type: string;
   to_node_id: string;
+  from_node_label: string | null;
+  to_node_label: string | null;
   mechanism: string;
   direction: string;
   horizon: string;

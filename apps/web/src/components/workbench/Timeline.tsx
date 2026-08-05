@@ -3,9 +3,6 @@
 import { useCallback, useEffect, useRef } from "react";
 
 import { useEvidence } from "@/components/evidence/EvidenceContext";
-import { AnalyzingBadge } from "@/components/ui/AnalyzingBadge";
-import { Skeleton } from "@/components/ui/Skeleton";
-import { usePanelReady } from "@/hooks/use-panel-ready";
 import { useResize } from "@/hooks/use-resize";
 import { baseChartOption, chartPalette } from "@/lib/chart-theme";
 import type { TimelinePoint } from "@/lib/types";
@@ -16,40 +13,30 @@ type Props = {
   points: TimelinePoint[];
 };
 
-/**
- * ECharts 时间线 + 情绪带。ECharts 在客户端首次挂载时 lazy import 并初始化。
- */
 export function Timeline({ points }: Props) {
-  const ready = usePanelReady(450);
-
-  if (!ready) {
+  if (points.length === 0) {
     return (
-      <>
-        <AnalyzingBadge />
-        <Skeleton variant="timeline" />
-      </>
+      <div className={styles.empty} role="status">
+        暂无可核对的时间桶数据
+      </div>
     );
   }
-
   return <TimelineChart points={points} />;
 }
 
-function TimelineChart({ points }: { points: TimelinePoint[] }) {
+function TimelineChart({ points }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<unknown>(null);
+  const chartRef = useRef<{ resize: () => void; dispose: () => void } | null>(null);
   const { open } = useEvidence();
 
-  const onResize = useCallback(() => {
-    const chart = chartRef.current as { resize?: () => void } | null;
-    chart?.resize?.();
-  }, []);
+  const onResize = useCallback(() => chartRef.current?.resize(), []);
   useResize(containerRef, onResize);
 
   useEffect(() => {
     let disposed = false;
     let handleResize: (() => void) | undefined;
 
-    (async () => {
+    void (async () => {
       const echarts = await import("echarts");
       if (disposed || !containerRef.current) return;
 
@@ -58,19 +45,60 @@ function TimelineChart({ points }: { points: TimelinePoint[] }) {
       });
       chartRef.current = chart;
 
-      const times = points.map((p) => p.timestamp);
-      const heats = points.map((p) => p.heat);
-      const sentiments = points.map((p) => p.sentiment);
-
+      const hasSentiment = points.some((point) => point.sentiment !== null);
       const markPoints = points
-        .filter((p) => p.label)
-        .map((p) => ({
-          name: p.label,
-          coord: [p.timestamp, p.heat],
-          evidenceIds: p.evidenceIds,
+        .filter((point) => point.label)
+        .map((point) => ({
+          name: point.label,
+          coord: [point.timestamp, point.documentCount],
+          evidenceIds: point.evidenceIds,
           itemStyle: { color: chartPalette.accent },
           label: { color: chartPalette.textPrimary, fontSize: 12 },
         }));
+
+      const series: unknown[] = [
+        {
+          name: "文档量",
+          type: "line",
+          smooth: true,
+          symbol: "circle",
+          symbolSize: 6,
+          lineStyle: { color: chartPalette.viz[0], width: 2 },
+          itemStyle: { color: chartPalette.viz[0] },
+          areaStyle: {
+            color: {
+              type: "linear",
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                { offset: 0, color: "rgba(38, 83, 201, 0.18)" },
+                { offset: 1, color: "rgba(38, 83, 201, 0)" },
+              ],
+            },
+          },
+          data: points.map((point) => [point.timestamp, point.documentCount]),
+          markPoint: {
+            symbol: "pin",
+            symbolSize: 32,
+            data: markPoints,
+          },
+        },
+      ];
+      if (hasSentiment) {
+        series.push({
+          name: "观点情绪",
+          type: "line",
+          yAxisIndex: 1,
+          smooth: true,
+          symbol: "none",
+          connectNulls: false,
+          lineStyle: { color: chartPalette.viz[4], width: 1, type: "dashed" },
+          itemStyle: { color: chartPalette.viz[4] },
+          data: points.map((point) => [point.timestamp, point.sentiment]),
+        });
+      }
 
       chart.setOption({
         ...baseChartOption,
@@ -83,83 +111,27 @@ function TimelineChart({ points }: { points: TimelinePoint[] }) {
         yAxis: [
           {
             ...baseChartOption.yAxis,
-            name: "热度",
-            nameGap: 16,
-            nameTextStyle: {
-              color: chartPalette.textSecondary,
-              fontSize: 12,
-              padding: [0, 0, 0, 4],
-            },
+            name: "文档量",
             min: 0,
+            minInterval: 1,
           },
           {
             ...baseChartOption.yAxis,
+            show: hasSentiment,
             name: "情绪",
-            nameGap: 16,
-            nameTextStyle: {
-              color: chartPalette.textSecondary,
-              fontSize: 12,
-              padding: [0, 4, 0, 0],
-            },
             min: -1,
             max: 1,
             position: "right",
-            axisLabel: {
-              ...baseChartOption.yAxis.axisLabel,
-              formatter: (v: number) => v.toFixed(1),
-            },
           },
         ],
-        series: [
-          {
-            name: "热度",
-            type: "line",
-            smooth: true,
-            symbol: "circle",
-            symbolSize: 6,
-            lineStyle: { color: chartPalette.viz[0], width: 2 },
-            itemStyle: { color: chartPalette.viz[0] },
-            areaStyle: {
-              color: {
-                type: "linear",
-                x: 0,
-                y: 0,
-                x2: 0,
-                y2: 1,
-                colorStops: [
-                  { offset: 0, color: "rgba(38, 83, 201, 0.18)" },
-                  { offset: 1, color: "rgba(38, 83, 201, 0)" },
-                ],
-              },
-            },
-            data: times.map((t, i) => [t, heats[i]]),
-            markPoint: {
-              symbol: "pin",
-              symbolSize: 32,
-              data: markPoints,
-            },
-          },
-          {
-            name: "情绪",
-            type: "line",
-            yAxisIndex: 1,
-            smooth: true,
-            symbol: "none",
-            lineStyle: { color: chartPalette.viz[4], width: 1, type: "dashed" },
-            itemStyle: { color: chartPalette.viz[4] },
-            data: times.map((t, i) => [t, sentiments[i]]),
-          },
-        ],
+        series,
       });
 
-      chart.on("click", (params) => {
+      chart.on("click", (params: unknown) => {
         const raw = params as { componentType?: string; data?: unknown };
-        if (raw.componentType === "markPoint") {
-          const data = raw.data as { evidenceIds?: string[] } | undefined;
-          if (data?.evidenceIds?.length) {
-            open(data.evidenceIds);
-          }
-        }
+        if (raw.componentType !== "markPoint") return;
+        const data = raw.data as { evidenceIds?: string[] } | undefined;
+        if (data?.evidenceIds?.length) open(data.evidenceIds);
       });
 
       handleResize = () => chart.resize();
@@ -169,14 +141,12 @@ function TimelineChart({ points }: { points: TimelinePoint[] }) {
     return () => {
       disposed = true;
       if (handleResize) window.removeEventListener("resize", handleResize);
-      const chart = chartRef.current;
-      if (chart && typeof (chart as { dispose?: () => void }).dispose === "function") {
-        (chart as { dispose: () => void }).dispose();
-      }
+      chartRef.current?.dispose();
       chartRef.current = null;
     };
   }, [points, open]);
 
+  const hasSentiment = points.some((point) => point.sentiment !== null);
   return (
     <div className={styles.wrap}>
       <div className={styles.legend} aria-hidden="true">
@@ -185,15 +155,17 @@ function TimelineChart({ points }: { points: TimelinePoint[] }) {
             className={styles.legendSwatch}
             style={{ background: chartPalette.viz[0] }}
           />
-          热度
+          文档量
         </span>
-        <span className={styles.legendItem}>
-          <span
-            className={`${styles.legendSwatch} ${styles.legendSwatchDashed}`}
-            style={{ color: chartPalette.viz[4] }}
-          />
-          情绪
-        </span>
+        {hasSentiment ? (
+          <span className={styles.legendItem}>
+            <span
+              className={`${styles.legendSwatch} ${styles.legendSwatchDashed}`}
+              style={{ color: chartPalette.viz[4] }}
+            />
+            观点情绪
+          </span>
+        ) : null}
       </div>
       <div ref={containerRef} className={styles.chart} />
     </div>

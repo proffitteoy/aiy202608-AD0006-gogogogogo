@@ -1,11 +1,14 @@
-"use client";
-
 import Link from "next/link";
-import { useState } from "react";
 
-import { ReportModal } from "@/components/report/ReportModal";
-import { RiskBadge } from "@/components/overview/RiskBadge";
-import { formatDateTime, formatRelative, formatSentiment, formatTime } from "@/lib/format";
+import { ScoreBadge } from "@/components/overview/ScoreBadge";
+import {
+  formatDateTime,
+  formatEventStatus,
+  formatRelative,
+  formatScore,
+  formatScoreInterval,
+  formatTime,
+} from "@/lib/format";
 import type { EventDetail } from "@/lib/types";
 
 import styles from "./WorkbenchHeader.module.css";
@@ -13,13 +16,9 @@ import styles from "./WorkbenchHeader.module.css";
 type Props = {
   detail: EventDetail;
   sourceCount: number;
-  avgSentiment: number;
-  reviewed: { done: number; total: number };
 };
 
-export function WorkbenchHeader({ detail, sourceCount, avgSentiment, reviewed }: Props) {
-  const [reportOpen, setReportOpen] = useState(false);
-
+export function WorkbenchHeader({ detail, sourceCount }: Props) {
   return (
     <header className={styles.header}>
       <div className={styles.left}>
@@ -29,14 +28,12 @@ export function WorkbenchHeader({ detail, sourceCount, avgSentiment, reviewed }:
 
         <div className={styles.titleBlock}>
           <div className={styles.crumbs}>
-            <RiskBadge level={detail.risk} />
+            <ScoreBadge score={detail.score} />
+            <span className={styles.status}>{formatEventStatus(detail.status)}</span>
             <span className={styles.time} data-numeric>
               {formatTime(detail.publishedAt)}
             </span>
-            <span className={styles.version} data-numeric>
-              v{detail.version}
-            </span>
-            {detail.freshness?.updatedAt && (
+            {detail.freshness?.updatedAt ? (
               <span
                 className={styles.updated}
                 title={formatDateTime(detail.freshness.updatedAt)}
@@ -44,7 +41,7 @@ export function WorkbenchHeader({ detail, sourceCount, avgSentiment, reviewed }:
                 最后更新{" "}
                 <span data-numeric>{formatRelative(detail.freshness.updatedAt)}</span>
               </span>
-            )}
+            ) : null}
           </div>
           <h1 className={styles.title}>{detail.title}</h1>
         </div>
@@ -53,26 +50,33 @@ export function WorkbenchHeader({ detail, sourceCount, avgSentiment, reviewed }:
       <div className={styles.right}>
         <div className={styles.meta}>
           <div className={styles.metaCell}>
-            <span className="eyebrow">来源</span>
+            <span className="eyebrow">Rule 3</span>
+            <span className={styles.metaValue} data-numeric>
+              {formatScore(detail.score.rawScore)}
+            </span>
+          </div>
+          <div className={styles.metaCell}>
+            <span className="eyebrow">Rule 4</span>
+            <span className={styles.metaValue} data-numeric>
+              {formatScore(detail.score.calibratedScore)}
+            </span>
+          </div>
+          <div className={styles.metaCell}>
+            <span className="eyebrow">置信度</span>
+            <span className={styles.metaValue} data-numeric>
+              {formatScore(detail.score.confidence)}
+            </span>
+          </div>
+          <div className={styles.metaCell}>
+            <span className="eyebrow">评分区间</span>
+            <span className={styles.metaValue} data-numeric>
+              {formatScoreInterval(detail.score.scoreInterval)}
+            </span>
+          </div>
+          <div className={styles.metaCell}>
+            <span className="eyebrow">证据</span>
             <span className={styles.metaValue} data-numeric>
               {sourceCount}
-            </span>
-          </div>
-          <div className={styles.metaCell}>
-            <span className="eyebrow">净情绪</span>
-            <span
-              className={`${styles.metaValue} ${
-                avgSentiment < 0 ? styles.negative : styles.positive
-              }`}
-              data-numeric
-            >
-              {formatSentiment(avgSentiment)}
-            </span>
-          </div>
-          <div className={styles.metaCell}>
-            <span className="eyebrow">复核</span>
-            <span className={styles.metaValue} data-numeric>
-              {reviewed.done}/{reviewed.total}
             </span>
           </div>
         </div>
@@ -80,15 +84,12 @@ export function WorkbenchHeader({ detail, sourceCount, avgSentiment, reviewed }:
         <button
           type="button"
           className={styles.reportBtn}
-          onClick={() => setReportOpen(true)}
+          disabled
+          title="AnalysisSnapshot 与 Agent 2 Render 尚未接入"
         >
           生成报告
         </button>
       </div>
-
-      {reportOpen && (
-        <ReportModal detail={detail} onClose={() => setReportOpen(false)} />
-      )}
     </header>
   );
 }

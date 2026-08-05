@@ -1,0 +1,28 @@
+{
+  "schema_version": "demo-scenario-v1",
+  "id": "real-estate-policy",
+  "name": "房地产救市政策转向对金融领域的影响与舆论",
+  "description": "回放房地产救市政策转向相关官方事实、专业新闻与舆情资料的历史汇编场景。",
+  "source_document": "../../data/房地产救市政策转向_最终版.docx",
+  "timezone": "Asia/Shanghai",
+  "collected_at": "2026-08-04",
+  "collection_method": "historical_docx_import",
+  "license_scope": "unknown_internal_demo_only",
+  "provenance_status": "unverified_historical_compilation",
+  "data_quality": {
+    "market": "unavailable",
+    "engagement": "unavailable",
+    "social_sample": "sparse"
+  },
+  "replay": {
+    "mode": "fixed_interval",
+    "interval_ms": 5000
+  },
+  "published_at_overrides": {
+    "1.1 中国人民银行《2024年中国货币政策大事记》——9月24日房地产政策记录（原文照搬）": {
+      "value": "2025-09-12",
+      "precision": "date",
+      "basis": "仅根据中国人民银行官方 URL 日期路径 20250912 推断，原始汇编未提供发布时间。"
+    }
+  }
+}

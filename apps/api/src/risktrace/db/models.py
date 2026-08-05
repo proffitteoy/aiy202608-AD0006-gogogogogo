@@ -5,6 +5,7 @@ from datetime import datetime
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     JSON,
+    BigInteger,
     Boolean,
     CheckConstraint,
     DateTime,
@@ -29,6 +30,12 @@ class SourceType(enum.StrEnum):
     MARKET = "market"
 
 
+class SourceHealthStatus(enum.StrEnum):
+    HEALTHY = "healthy"
+    DEGRADED = "degraded"
+    UNAVAILABLE = "unavailable"
+
+
 class EventStatus(enum.StrEnum):
     CANDIDATE = "candidate"
     CONFIRMED = "confirmed"
@@ -43,10 +50,20 @@ class EventStatus(enum.StrEnum):
 class RawDocument(Base):
     __tablename__ = "raw_documents"
     __table_args__ = (
-        UniqueConstraint("platform", "source_id", name="uq_raw_documents_platform_source"),
+        UniqueConstraint(
+            "tenant_id",
+            "platform",
+            "source_id",
+            name="uq_raw_documents_tenant_platform_source",
+        ),
         CheckConstraint(
             "source_type IN ('fact', 'news', 'social', 'market')",
             name="ck_raw_documents_source_type",
+        ),
+        CheckConstraint(
+            "source_level IN ('official', 'professional_media', "
+            "'public_discussion', 'market_data')",
+            name="ck_raw_documents_source_level",
         ),
         Index("ix_raw_documents_published_at", "published_at"),
         Index("ix_raw_documents_tenant_id", "tenant_id"),
@@ -55,11 +72,14 @@ class RawDocument(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True)
     source_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    source_level: Mapped[str] = mapped_column(String(32), nullable=False)
     platform: Mapped[str] = mapped_column(String(64), nullable=False)
     source_id: Mapped[str] = mapped_column(String(255), nullable=False)
     source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     collected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    replay_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     author_id_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
     title: Mapped[str | None] = mapped_column(Text, nullable=True)
     raw_text: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -70,8 +90,109 @@ class RawDocument(Base):
     license_scope: Mapped[str] = mapped_column(String(128), nullable=False)
     content_hash: Mapped[str] = mapped_column(String(128), nullable=False)
     raw_payload_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_metadata: Mapped[dict[str, object]] = mapped_column(JSON, default=dict, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class IngestionReceipt(Base):
+    __tablename__ = "ingestion_receipts"
+    __table_args__ = (
+        CheckConstraint(
+            "outcome IN ('inserted', 'duplicate')",
+            name="ck_ingestion_receipts_outcome",
+        ),
+        CheckConstraint(
+            "processing_status IN ('pending_enrichment')",
+            name="ck_ingestion_receipts_processing_status",
+        ),
+        Index("ix_ingestion_receipts_document_received", "document_id", "received_at"),
+        Index("ix_ingestion_receipts_tenant_received", "tenant_id", "received_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("raw_documents.id", ondelete="RESTRICT"), nullable=False
+    )
+    provider: Mapped[str] = mapped_column(String(64), nullable=False)
+    stream: Mapped[str] = mapped_column(String(128), nullable=False, default="default")
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    replay_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    outcome: Mapped[str] = mapped_column(String(16), nullable=False)
+    processing_status: Mapped[str] = mapped_column(
+        String(32), default="pending_enrichment", nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class SourceCheckpoint(Base):
+    __tablename__ = "source_checkpoints"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id",
+            "provider",
+            "stream",
+            name="uq_source_checkpoints_stream",
+        ),
+        Index("ix_source_checkpoints_tenant_provider", "tenant_id", "provider"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    provider: Mapped[str] = mapped_column(String(64), nullable=False)
+    stream: Mapped[str] = mapped_column(String(128), nullable=False, default="default")
+    cursor: Mapped[str] = mapped_column(Text, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+
+class SourceHealth(Base):
+    __tablename__ = "source_health"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id",
+            "provider",
+            "stream",
+            name="uq_source_health_stream",
+        ),
+        CheckConstraint(
+            "status IN ('healthy', 'degraded', 'unavailable')",
+            name="ck_source_health_status",
+        ),
+        CheckConstraint(
+            "source_type IN ('fact', 'news', 'social', 'market')",
+            name="ck_source_health_source_type",
+        ),
+        CheckConstraint(
+            "consecutive_failures >= 0",
+            name="ck_source_health_failure_count",
+        ),
+        Index("ix_source_health_tenant_status", "tenant_id", "status"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    provider: Mapped[str] = mapped_column(String(64), nullable=False)
+    stream: Mapped[str] = mapped_column(String(128), nullable=False, default="default")
+    source_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(16), default=SourceHealthStatus.HEALTHY.value, nullable=False
+    )
+    consecutive_failures: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_success_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_failure_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
 
@@ -84,10 +205,15 @@ class Event(Base):
             name="ck_events_status",
         ),
         CheckConstraint(
-            "(admission_score IS NULL OR admission_score BETWEEN 0 AND 1) AND "
-            "(confidence IS NULL OR confidence BETWEEN 0 AND 1) AND "
+            "(admission_decision_value IS NULL OR admission_decision_value BETWEEN 0 AND 1) AND "
+            "(score_confidence IS NULL OR score_confidence BETWEEN 0 AND 1) AND "
             "(heat_score IS NULL OR heat_score BETWEEN 0 AND 1) AND "
-            "(risk_score IS NULL OR risk_score BETWEEN 0 AND 1) AND "
+            "(raw_score IS NULL OR raw_score BETWEEN 0 AND 1) AND "
+            "(calibrated_score IS NULL OR calibrated_score BETWEEN 0 AND 1) AND "
+            "((score_lower_bound IS NULL AND score_upper_bound IS NULL) OR "
+            "(score_lower_bound BETWEEN 0 AND 1 AND score_upper_bound BETWEEN 0 AND 1 AND "
+            "score_lower_bound <= score_upper_bound AND "
+            "calibrated_score BETWEEN score_lower_bound AND score_upper_bound)) AND "
             "(momentum IS NULL OR momentum BETWEEN -1 AND 1) AND "
             "centroid_weight >= 0 AND evidence_count >= 0",
             name="ck_events_normalized_scores",
@@ -106,11 +232,16 @@ class Event(Base):
     centroid_embedding: Mapped[list[float] | None] = mapped_column(Vector(), nullable=True)
     centroid_weight: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     embedding_model: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    admission_score: Mapped[float | None] = mapped_column(Float, nullable=True)
-    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    admission_decision_value: Mapped[float | None] = mapped_column(Float, nullable=True)
+    score_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     heat_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     momentum: Mapped[float | None] = mapped_column(Float, nullable=True)
-    risk_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    raw_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    calibrated_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    score_lower_bound: Mapped[float | None] = mapped_column(Float, nullable=True)
+    score_upper_bound: Mapped[float | None] = mapped_column(Float, nullable=True)
+    scoring_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    calibration_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
     evidence_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -177,13 +308,14 @@ class EventAdmissionRecord(Base):
     __table_args__ = (
         UniqueConstraint("document_id", "rule_version", name="uq_event_admission_document_rule"),
         CheckConstraint(
-            "decision IN ('drop', 'attach', 'candidate', 'create')",
+            "decision IN ('drop', 'wait', 'admit', 'attach')",
             name="ck_event_admission_records_decision",
         ),
         CheckConstraint(
-            "market_relevance BETWEEN 0 AND 1 AND eventness BETWEEN 0 AND 1 AND "
+            "market_relevance BETWEEN 0 AND 1 AND state_change_strength BETWEEN 0 AND 1 AND "
             "potential_impact BETWEEN 0 AND 1 AND novelty BETWEEN 0 AND 1 AND "
-            "source_quality BETWEEN 0 AND 1 AND admission_score BETWEEN 0 AND 1 AND "
+            "source_quality BETWEEN 0 AND 1 AND data_completeness BETWEEN 0 AND 1 AND "
+            "decision_value BETWEEN 0 AND 1 AND "
             "(matched_similarity IS NULL OR matched_similarity BETWEEN 0 AND 1)",
             name="ck_event_admission_records_scores",
         ),
@@ -200,11 +332,12 @@ class EventAdmissionRecord(Base):
     )
     decision: Mapped[str] = mapped_column(String(16), nullable=False)
     market_relevance: Mapped[float] = mapped_column(Float, nullable=False)
-    eventness: Mapped[float] = mapped_column(Float, nullable=False)
+    state_change_strength: Mapped[float] = mapped_column(Float, nullable=False)
     potential_impact: Mapped[float] = mapped_column(Float, nullable=False)
     novelty: Mapped[float] = mapped_column(Float, nullable=False)
     source_quality: Mapped[float] = mapped_column(Float, nullable=False)
-    admission_score: Mapped[float] = mapped_column(Float, nullable=False)
+    data_completeness: Mapped[float] = mapped_column(Float, nullable=False)
+    decision_value: Mapped[float] = mapped_column(Float, nullable=False)
     matched_similarity: Mapped[float | None] = mapped_column(Float, nullable=True)
     rule_version: Mapped[str] = mapped_column(String(64), nullable=False)
     reasons: Mapped[list[str]] = mapped_column(JSON, nullable=False)
@@ -220,7 +353,7 @@ class EventMetric(Base):
             "event_id",
             "metric_at",
             "bucket_minutes",
-            "rule_version",
+            "scoring_version",
             name="uq_event_metrics_replay",
         ),
         Index("ix_event_metrics_event_time", "event_id", "metric_at"),
@@ -237,7 +370,8 @@ class EventMetric(Base):
             "(coverage IS NULL OR coverage BETWEEN 0 AND 1) AND heat BETWEEN 0 AND 1 AND "
             "heat_completeness BETWEEN 0 AND 1 AND "
             "(momentum IS NULL OR momentum BETWEEN -1 AND 1) AND "
-            "(risk IS NULL OR risk BETWEEN 0 AND 1) AND risk_completeness BETWEEN 0 AND 1",
+            "(raw_score IS NULL OR raw_score BETWEEN 0 AND 1) AND "
+            "scoring_completeness BETWEEN 0 AND 1",
             name="ck_event_metrics_scores",
         ),
     )
@@ -261,9 +395,9 @@ class EventMetric(Base):
     heat: Mapped[float] = mapped_column(Float, nullable=False)
     heat_completeness: Mapped[float] = mapped_column(Float, nullable=False)
     momentum: Mapped[float | None] = mapped_column(Float, nullable=True)
-    risk: Mapped[float | None] = mapped_column(Float, nullable=True)
-    risk_completeness: Mapped[float] = mapped_column(Float, nullable=False)
-    rule_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    raw_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    scoring_completeness: Mapped[float] = mapped_column(Float, nullable=False)
+    scoring_version: Mapped[str] = mapped_column(String(64), nullable=False)
     input_document_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
     parameters: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -399,6 +533,72 @@ class TransmissionEdge(Base):
     model_version: Mapped[str] = mapped_column(String(64), nullable=False, default="0.1.0")
     prompt_version: Mapped[str] = mapped_column(String(64), nullable=False, default="v1")
     input_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class EventScoreCalibration(Base):
+    __tablename__ = "event_score_calibrations"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id",
+            "event_id",
+            "score_calculation_id",
+            "evidence_snapshot_hash",
+            "calibration_version",
+            name="uq_event_score_calibrations_replay",
+        ),
+        Index("ix_event_score_calibrations_event_snapshot", "event_id", "snapshot_at"),
+        Index("ix_event_score_calibrations_tenant_snapshot", "tenant_id", "snapshot_at"),
+        CheckConstraint(
+            "calculation_status IN ('complete', 'degraded')",
+            name="ck_event_score_calibrations_status",
+        ),
+        CheckConstraint(
+            "raw_score BETWEEN 0 AND 1 AND calibrated_score BETWEEN 0 AND 1 AND "
+            "confidence BETWEEN 0 AND 1 AND lower_bound BETWEEN 0 AND 1 AND "
+            "upper_bound BETWEEN 0 AND 1 AND lower_bound <= calibrated_score AND "
+            "calibrated_score <= upper_bound AND data_completeness BETWEEN 0 AND 1 AND "
+            "source_health BETWEEN 0 AND 1 AND "
+            "(market_data_completeness IS NULL OR "
+            "market_data_completeness BETWEEN 0 AND 1) AND sample_count > 0 AND "
+            "monte_carlo_seed >= 0",
+            name="ck_event_score_calibrations_values",
+        ),
+        CheckConstraint(
+            "(calculation_status = 'complete' AND json_array_length(degradation_reasons) = 0) OR "
+            "(calculation_status = 'degraded' AND json_array_length(degradation_reasons) > 0)",
+            name="ck_event_score_calibrations_degradation_state",
+        ),
+    )
+
+    calculation_id: Mapped[uuid.UUID] = mapped_column(primary_key=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(nullable=False)
+    event_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("events.id", ondelete="RESTRICT"), nullable=False
+    )
+    score_calculation_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("event_metrics.calculation_id", ondelete="RESTRICT"), nullable=False
+    )
+    snapshot_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    scoring_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    calibration_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    raw_score: Mapped[float] = mapped_column(Float, nullable=False)
+    calibrated_score: Mapped[float] = mapped_column(Float, nullable=False)
+    confidence: Mapped[float] = mapped_column(Float, nullable=False)
+    lower_bound: Mapped[float] = mapped_column(Float, nullable=False)
+    upper_bound: Mapped[float] = mapped_column(Float, nullable=False)
+    data_completeness: Mapped[float] = mapped_column(Float, nullable=False)
+    source_health: Mapped[float] = mapped_column(Float, nullable=False)
+    market_data_completeness: Mapped[float | None] = mapped_column(Float, nullable=True)
+    input_evidence_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    evidence_snapshot_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    monte_carlo_seed: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    sample_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    parameters: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False)
+    calculation_status: Mapped[str] = mapped_column(String(16), nullable=False)
+    degradation_reasons: Mapped[list[str]] = mapped_column(JSON, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

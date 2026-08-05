@@ -31,6 +31,32 @@ export function formatRatio(value: number): string {
   return value.toFixed(2);
 }
 
+export function formatScore(value: number | null, digits = 1): string {
+  return value === null ? "--" : (value * 100).toFixed(digits);
+}
+
+export function formatScoreInterval(
+  interval: { lowerBound: number; upperBound: number } | null,
+): string {
+  if (!interval) return "--";
+  return `${formatScore(interval.lowerBound)}-${formatScore(interval.upperBound)}`;
+}
+
+const eventStatusLabels: Record<string, string> = {
+  candidate: "候选",
+  confirmed: "已确认",
+  active: "监测中",
+  analyzed: "已分析",
+  alerted: "已告警",
+  cooling: "降温中",
+  closed: "已关闭",
+  archived: "已归档",
+};
+
+export function formatEventStatus(status: string): string {
+  return eventStatusLabels[status.toLowerCase()] ?? status;
+}
+
 /**
  * ISO 时间 → "15:07"
  */

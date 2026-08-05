@@ -26,12 +26,6 @@ export function getApiBaseUrl(): string {
   return process.env.RISKTRACE_API_URL?.trim() || DEFAULT_BASE_URL;
 }
 
-export function isMockFallbackAllowed(): boolean {
-  const raw = process.env.RISKTRACE_ALLOW_MOCK_FALLBACK?.trim().toLowerCase();
-  if (raw === "false" || raw === "0" || raw === "off") return false;
-  return true;
-}
-
 type ApiFetchInit = Omit<RequestInit, "body"> & {
   body?: unknown;
   timeoutMs?: number;

@@ -1,0 +1,28 @@
+{
+  "schema_version": "demo-scenario-v1",
+  "id": "deepseek-r1",
+  "name": "DeepSeek R1 开源发布后金融领域影响与舆论",
+  "description": "回放 DeepSeek R1 开源发布后官方事实、专业新闻与舆情资料的历史汇编场景。",
+  "source_document": "../../data/DeepSeek_R1_最终版.docx",
+  "timezone": "Asia/Shanghai",
+  "collected_at": "2026-08-04",
+  "collection_method": "historical_docx_import",
+  "license_scope": "unknown_internal_demo_only",
+  "provenance_status": "unverified_historical_compilation",
+  "data_quality": {
+    "market": "unavailable",
+    "engagement": "unavailable",
+    "social_sample": "sparse"
+  },
+  "replay": {
+    "mode": "fixed_interval",
+    "interval_ms": 5000
+  },
+  "published_at_overrides": {
+    "DeepSeek官方API文档：DeepSeek-R1发布公告（原文照搬）": {
+      "value": "2025-01-20",
+      "precision": "date",
+      "basis": "根据官方公告 URL 中的 news250120 与相邻官方更新记录中的 Date: 2025-01-20 推断。"
+    }
+  }
+}

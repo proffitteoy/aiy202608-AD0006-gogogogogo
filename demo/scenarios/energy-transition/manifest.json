@@ -1,0 +1,22 @@
+{
+  "schema_version": "demo-scenario-v1",
+  "id": "energy-transition",
+  "name": "十五五能源转型与金融市场影响",
+  "description": "回放十五五能源转型相关官方事实、专业新闻与舆情资料的历史汇编场景。",
+  "source_document": "../../data/十五五能源转型与金融市场影响最终版.docx",
+  "timezone": "Asia/Shanghai",
+  "collected_at": "2026-08-04",
+  "collection_method": "historical_docx_import",
+  "license_scope": "unknown_internal_demo_only",
+  "provenance_status": "unverified_historical_compilation",
+  "data_quality": {
+    "market": "unavailable",
+    "engagement": "unavailable",
+    "social_sample": "sparse"
+  },
+  "replay": {
+    "mode": "fixed_interval",
+    "interval_ms": 5000
+  },
+  "published_at_overrides": {}
+}

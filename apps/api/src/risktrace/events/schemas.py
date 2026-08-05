@@ -9,9 +9,15 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 class AdmissionDecision(enum.StrEnum):
     DROP = "drop"
+    WAIT = "wait"
+    ADMIT = "admit"
     ATTACH = "attach"
-    CANDIDATE = "candidate"
-    CREATE = "create"
+
+
+class ConfirmationSourceType(enum.StrEnum):
+    FACT = "fact"
+    NEWS = "news"
+    SOCIAL = "social"
 
 
 class LifecycleStatus(enum.StrEnum):
@@ -58,9 +64,10 @@ class EventClaim(BaseModel):
     published_at: datetime
     location: str | None = Field(default=None, max_length=255)
     market_relevance: float = Field(ge=0.0, le=1.0)
-    eventness: float = Field(ge=0.0, le=1.0)
+    state_change_strength: float = Field(ge=0.0, le=1.0)
     potential_impact: float = Field(ge=0.0, le=1.0)
     source_quality: float = Field(ge=0.0, le=1.0)
+    data_completeness: float = Field(ge=0.0, le=1.0)
     impact_channels: tuple[ImpactChannel, ...] = ()
     related_assets: tuple[RelatedAsset, ...] = ()
     embedding: tuple[float, ...] = Field(min_length=1)
@@ -93,20 +100,58 @@ class EventClaim(BaseModel):
 @dataclass(frozen=True, slots=True)
 class AdmissionInputs:
     market_relevance: float
-    eventness: float
+    state_change_strength: float
     potential_impact: float
     novelty: float
     source_quality: float
+    data_completeness: float
 
 
 @dataclass(frozen=True, slots=True)
 class AdmissionResult:
     decision: AdmissionDecision
-    score: float
+    decision_value: float
     rule_version: str
     reasons: tuple[str, ...]
     matched_event_id: uuid.UUID | None = None
     matched_similarity: float | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ConfirmationEvidence:
+    document_id: uuid.UUID
+    source_type: ConfirmationSourceType
+    source_reliability: float
+    document_confidence: float
+    cluster_similarity: float
+    contradiction_strength: float = 0.0
+
+    def __post_init__(self) -> None:
+        for name in (
+            "source_reliability",
+            "document_confidence",
+            "cluster_similarity",
+            "contradiction_strength",
+        ):
+            value = getattr(self, name)
+            if not math.isfinite(value) or not 0.0 <= value <= 1.0:
+                raise ValueError(f"{name} must be a finite number between 0 and 1")
+
+    @property
+    def support(self) -> float:
+        return self.source_reliability * self.document_confidence
+
+
+@dataclass(frozen=True, slots=True)
+class ConfirmationResult:
+    certainty: float
+    fact_support: float
+    news_support: float
+    social_support: float
+    cluster_coherence: float
+    contradiction: float
+    rule_version: str
+    input_document_ids: tuple[uuid.UUID, ...]
 
 
 @dataclass(frozen=True, slots=True)

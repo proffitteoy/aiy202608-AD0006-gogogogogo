@@ -1,10 +1,7 @@
-/**
- * Server-side loader：屏蔽掉「后端可能挂 / 数据可能空」的细节，
- * 页面组件只关心一个稳定的 EventDetail/EventSummary[] 结果。
- */
+import type { EventDetail, EventSummary, PlatformPulse } from "@/lib/types";
 
-import { ApiError, isMockFallbackAllowed } from "./client";
 import { adaptEventDetail, adaptEventSummary } from "./adapters";
+import { ApiError } from "./client";
 import {
   fetchEventEvidence,
   fetchEventList,
@@ -12,74 +9,106 @@ import {
   fetchEventTransmission,
   fetchEventWorkspace,
 } from "./events";
-import type { EventDetail, EventSummary } from "@/lib/types";
-import { eventDetail as mockEventDetail } from "@/lib/mock/event-detail";
-import { events as mockEvents, pulse as mockPulse } from "@/lib/mock/events";
-import type { PlatformPulse } from "@/lib/types";
 
-export type LoadResult<T> =
-  | { source: "backend"; data: T }
-  | { source: "mock"; data: T; reason: string };
+export type ListLoadResult =
+  | { status: "ready"; data: EventSummary[] }
+  | { status: "degraded"; data: EventSummary[]; reason: string };
 
-function fallback<T>(data: T, reason: string): LoadResult<T> {
-  return { source: "mock", data, reason };
+export type DetailLoadResult =
+  | { status: "ready"; data: EventDetail; warnings: string[] }
+  | { status: "not_found" }
+  | { status: "unavailable"; reason: string };
+
+function errorReason(error: unknown): string {
+  if (error instanceof ApiError) {
+    return error.status === 0 ? "后端不可达" : `后端返回 HTTP ${error.status}`;
+  }
+  return "后端请求失败";
 }
 
-export async function loadEventList(): Promise<LoadResult<EventSummary[]>> {
+export async function loadEventList(): Promise<ListLoadResult> {
   try {
     const list = await fetchEventList();
-    if (list.items.length === 0) {
-      if (isMockFallbackAllowed()) return fallback(mockEvents, "后端返回空列表");
-      return { source: "backend", data: [] };
-    }
     return {
-      source: "backend",
+      status: "ready",
       data: list.items.map((raw) => adaptEventSummary(raw)),
     };
-  } catch (err) {
-    if (!isMockFallbackAllowed()) throw err;
-    const reason =
-      err instanceof ApiError ? `${err.status} ${err.message}` : "后端不可达";
-    return fallback(mockEvents, reason);
+  } catch (error) {
+    return { status: "degraded", data: [], reason: errorReason(error) };
   }
 }
 
-export async function loadPulse(): Promise<LoadResult<PlatformPulse>> {
-  // 后端暂无 pulse 端点，先透传 mock
-  return fallback(mockPulse, "后端暂无平台指标端点");
+export function derivePulse(events: EventSummary[]): PlatformPulse {
+  return {
+    totalEvents: events.length,
+    activeEvents: events.filter((event) =>
+      ["active", "analyzed", "alerted"].includes(event.status.toLowerCase()),
+    ).length,
+    scoredEvents: events.filter(
+      (event) => event.score.calibratedScore !== null,
+    ).length,
+    documentCount: events.reduce((sum, event) => sum + event.sourceCount, 0),
+  };
 }
 
-export async function loadEventDetail(
-  id: string,
-): Promise<LoadResult<EventDetail> | null> {
+export async function loadEventDetail(id: string): Promise<DetailLoadResult> {
   try {
-    const [workspace, evidence, opinions, transmission] = await Promise.all([
-      fetchEventWorkspace(id),
-      fetchEventEvidence(id).catch(() => ({ items: [], total: 0 })),
-      fetchEventOpinions(id).catch(() => ({ items: [], total: 0 })),
-      fetchEventTransmission(id).catch(() => ({ items: [], total: 0 })),
-    ]);
+    const workspace = await fetchEventWorkspace(id);
+    const [evidenceResult, opinionsResult, transmissionResult] =
+      await Promise.allSettled([
+        fetchEventEvidence(id),
+        fetchEventOpinions(id),
+        fetchEventTransmission(id),
+      ]);
+
+    const evidence =
+      evidenceResult.status === "fulfilled" ? evidenceResult.value.items : [];
+    const opinions =
+      opinionsResult.status === "fulfilled" ? opinionsResult.value.items : [];
+    const transmission =
+      transmissionResult.status === "fulfilled"
+        ? transmissionResult.value.items
+        : [];
+
+    const warnings: string[] = [];
+    if (evidenceResult.status === "rejected") warnings.push("证据接口不可用");
+    if (opinionsResult.status === "rejected") warnings.push("观点归因接口不可用");
+    if (transmissionResult.status === "rejected") {
+      warnings.push("传导假设接口不可用");
+    }
 
     return {
-      source: "backend",
+      status: "ready",
+      warnings,
       data: adaptEventDetail({
         workspace,
-        evidence: evidence.items,
-        opinions: opinions.items,
-        transmission: transmission.items,
+        evidence,
+        opinions,
+        transmission,
+        availability: {
+          evidence:
+            evidenceResult.status === "fulfilled" ? "available" : "degraded",
+          opinions:
+            opinionsResult.status === "rejected"
+              ? "degraded"
+              : opinions.length > 0
+                ? "available"
+                : "not_generated",
+          transmission:
+            transmissionResult.status === "rejected"
+              ? "degraded"
+              : transmission.length > 0
+                ? "available"
+                : "not_generated",
+          impact: "not_generated",
+          report: "not_generated",
+        },
       }),
     };
-  } catch (err) {
-    if (err instanceof ApiError && err.status === 404) {
-      if (isMockFallbackAllowed() && id === mockEventDetail.id) {
-        return fallback(mockEventDetail, "后端未找到该事件");
-      }
-      return null;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return { status: "not_found" };
     }
-    if (!isMockFallbackAllowed()) throw err;
-    if (id !== mockEventDetail.id) return null;
-    const reason =
-      err instanceof ApiError ? `${err.status} ${err.message}` : "后端不可达";
-    return fallback(mockEventDetail, reason);
+    return { status: "unavailable", reason: errorReason(error) };
   }
 }

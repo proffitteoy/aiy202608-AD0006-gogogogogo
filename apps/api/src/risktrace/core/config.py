@@ -1,5 +1,7 @@
 from functools import lru_cache
+from uuid import UUID
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -23,6 +25,10 @@ class Settings(BaseSettings):
     s3_secret_access_key: str = "risktrace-local-secret"
     s3_bucket: str = "risktrace"
     healthcheck_timeout_seconds: float = 2.0
+    demo_tenant_id: UUID = UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+    ingestion_api_token: SecretStr = SecretStr("")
+    ingestion_tenant_id: UUID = UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+    ingestion_allowed_providers: str = ""
     llm_provider: str = "openai"
     llm_model: str = "gpt-4o-mini"
     llm_small_model: str = "gpt-4o-mini"
@@ -34,6 +40,14 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def ingestion_allowed_provider_set(self) -> frozenset[str]:
+        return frozenset(
+            provider.strip()
+            for provider in self.ingestion_allowed_providers.split(",")
+            if provider.strip()
+        )
 
 
 @lru_cache

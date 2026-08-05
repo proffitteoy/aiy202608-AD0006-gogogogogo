@@ -1,9 +1,28 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from risktrace.api.schemas.common import PaginatedResponse
+
+
+class ScoreInterval(BaseModel):
+    lower_bound: float = Field(ge=0.0, le=1.0)
+    upper_bound: float = Field(ge=0.0, le=1.0)
+
+
+class EventScoreSummary(BaseModel):
+    status: Literal["complete", "degraded", "unavailable"]
+    raw_score: float | None = Field(default=None, ge=0.0, le=1.0)
+    calibrated_score: float | None = Field(default=None, ge=0.0, le=1.0)
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    score_interval: ScoreInterval | None = None
+    scoring_version: str | None = None
+    calibration_version: str | None = None
+    calculation_id: UUID | None = None
+    score_calculation_id: UUID | None = None
+    degradation_reasons: list[str] = Field(default_factory=list)
 
 
 class EventSummary(BaseModel):
@@ -16,6 +35,7 @@ class EventSummary(BaseModel):
     document_count: int
     source_breakdown: dict[str, int]
     latest_activity: datetime | None = None
+    score: EventScoreSummary
     created_at: datetime
     updated_at: datetime
 
@@ -60,9 +80,12 @@ class EvidenceItem(BaseModel):
     source_type: str
     platform: str
     published_at: datetime
+    collected_at: datetime
     source_url: str | None = None
     engagement: dict | None = None
     raw_text_preview: str
+    collection_method: str
+    license_scope: str
 
 
 class EvidenceListResponse(PaginatedResponse[EvidenceItem]):

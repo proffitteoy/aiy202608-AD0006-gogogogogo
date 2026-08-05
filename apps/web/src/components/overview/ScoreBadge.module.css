@@ -1,0 +1,29 @@
+.badge {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+  border-radius: 50%;
+}
+
+.complete {
+  color: var(--accent);
+}
+
+.degraded {
+  color: var(--risk-mid);
+}
+
+.unavailable {
+  color: var(--text-tertiary);
+}

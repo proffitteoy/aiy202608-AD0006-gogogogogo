@@ -18,6 +18,8 @@ from risktrace.events.metrics import (
 from risktrace.events.schemas import (
     AdmissionDecision,
     AdmissionInputs,
+    ConfirmationEvidence,
+    ConfirmationSourceType,
     EventCandidate,
     EventClaim,
     LifecycleStatus,
@@ -47,9 +49,10 @@ def claim(**overrides: object) -> EventClaim:
         ),
         "published_at": NOW,
         "market_relevance": 0.96,
-        "eventness": 0.91,
+        "state_change_strength": 0.91,
         "potential_impact": 0.86,
         "source_quality": 0.80,
+        "data_completeness": 0.90,
         "embedding": (1.0, 0.0, 0.0),
     }
     values.update(overrides)
@@ -89,19 +92,19 @@ def test_engine_attaches_a_same_event_but_does_not_call_it_a_duplicate() -> None
 def test_admission_keeps_high_impact_low_quality_information_as_candidate() -> None:
     result = EventEngine().evaluate(claim(source_quality=0.15), [])
 
-    assert result.admission.score >= 0.75
-    assert result.admission.decision is AdmissionDecision.CANDIDATE
-    assert "source_quality_requires_candidate_state" in result.admission.reasons
+    assert result.admission.decision_value >= 0.70
+    assert result.admission.decision is AdmissionDecision.WAIT
+    assert "source_quality_requires_wait" in result.admission.reasons
 
 
 def test_admission_hard_gates_and_create_path_are_distinct() -> None:
     policy = AdmissionPolicy()
-    dropped = policy.evaluate(AdmissionInputs(0.49, 1.0, 1.0, 1.0, 1.0))
+    dropped = policy.evaluate(AdmissionInputs(0.49, 1.0, 1.0, 1.0, 1.0, 1.0))
     created = EventEngine().evaluate(claim(), [])
 
     assert dropped.decision is AdmissionDecision.DROP
     assert dropped.reasons == ("market_relevance_below_gate",)
-    assert created.admission.decision is AdmissionDecision.CREATE
+    assert created.admission.decision is AdmissionDecision.ADMIT
     assert initial_status_for(created.admission.decision) is LifecycleStatus.CONFIRMED
 
 
@@ -168,7 +171,7 @@ def test_source_diversity_uses_normalized_entropy() -> None:
     assert source_diversity({}) is None
 
 
-def test_metrics_separate_heat_momentum_risk_and_missingness() -> None:
+def test_rule3_uses_only_observable_inputs_and_preserves_missingness() -> None:
     result = MetricPolicy().calculate(
         EventMetricInputs(
             message_count_5m=40,
@@ -181,18 +184,22 @@ def test_metrics_separate_heat_momentum_risk_and_missingness() -> None:
             covered_platform_count=3,
             expected_platform_count=4,
             previous_heat=0.30,
-            impact=0.90,
-            sentiment_severity=0.20,
-            exposure=0.85,
-            uncertainty=0.70,
+            source_quality=0.85,
+            independent_source_ratio=0.75,
+            novelty=0.70,
+            market_relevance=0.90,
+            potential_impact=0.85,
+            market_response=0.60,
+            data_completeness=0.90,
         )
     )
 
     assert 0.0 <= result.heat <= 1.0
     assert result.momentum == pytest.approx(result.heat - 0.30)
-    assert result.risk == pytest.approx(0.715)
     assert result.heat_completeness == pytest.approx(1.0)
-    assert result.risk_completeness == pytest.approx(1.0)
+    assert 0.0 <= result.raw_score <= 1.0
+    assert result.scoring_completeness == pytest.approx(1.0)
+    assert result.scoring_version == "deterministic-scoring-v1"
 
     incomplete = MetricPolicy().calculate(
         EventMetricInputs(
@@ -206,21 +213,34 @@ def test_metrics_separate_heat_momentum_risk_and_missingness() -> None:
             covered_platform_count=1,
             expected_platform_count=None,
             previous_heat=None,
-            impact=0.8,
-            sentiment_severity=None,
-            exposure=None,
-            uncertainty=None,
+            source_quality=0.80,
+            independent_source_ratio=0.30,
+            novelty=0.60,
+            market_relevance=0.75,
+            potential_impact=0.80,
+            market_response=None,
+            data_completeness=0.50,
         )
     )
     assert incomplete.engagement is None
     assert incomplete.coverage is None
     assert incomplete.heat_completeness < 1.0
-    assert incomplete.risk == pytest.approx(0.8)
-    assert incomplete.risk_completeness == pytest.approx(0.35)
+    assert 0.0 <= incomplete.raw_score <= 1.0
+    assert incomplete.scoring_completeness == pytest.approx(0.82)
 
 
 def test_candidate_confirmation_and_lifecycle_are_explicit() -> None:
-    confirmation = ConfirmationPolicy().score(3, 0.9, 0.8)
+    confirmation = ConfirmationPolicy().score(
+        [
+            ConfirmationEvidence(
+                document_id=uuid.UUID("00000000-0000-0000-0000-000000000020"),
+                source_type=ConfirmationSourceType.FACT,
+                source_reliability=1.0,
+                document_confidence=0.95,
+                cluster_similarity=0.95,
+            )
+        ]
+    )
     lifecycle = LifecyclePolicy()
 
     assert confirmation >= 0.70
@@ -261,3 +281,23 @@ def test_candidate_confirmation_and_lifecycle_are_explicit() -> None:
         )
         is LifecycleStatus.ACTIVE
     )
+
+
+def test_confirmation_does_not_treat_social_velocity_as_fact_support() -> None:
+    policy = ConfirmationPolicy()
+    social_evidence = [
+        ConfirmationEvidence(
+            document_id=uuid.UUID(f"00000000-0000-0000-0000-{index:012d}"),
+            source_type=ConfirmationSourceType.SOCIAL,
+            source_reliability=0.90,
+            document_confidence=0.90,
+            cluster_similarity=0.95,
+        )
+        for index in range(30, 35)
+    ]
+
+    result = policy.calculate(social_evidence)
+
+    assert result.social_support > 0.99
+    assert result.certainty < policy.threshold
+    assert not policy.is_confirmed(social_evidence)

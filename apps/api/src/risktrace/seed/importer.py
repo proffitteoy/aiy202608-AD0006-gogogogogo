@@ -8,6 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from risktrace.db.models import Entity, Event, EventDocument, EvidenceLink, RawDocument
 from risktrace.seed.data import ENTITIES, EVENT, EVENT_DOCUMENTS, EVIDENCE_LINKS, RAW_DOCUMENTS
 
+_SOURCE_LEVEL_BY_TYPE = {
+    "fact": "official",
+    "news": "professional_media",
+    "social": "public_discussion",
+    "market": "market_data",
+}
+
 
 class SeedImporter:
     def __init__(self, session: AsyncSession, checkpoint_path: str | None = None) -> None:
@@ -50,10 +57,15 @@ class SeedImporter:
         inserted = 0
         skipped = 0
         for doc_data in RAW_DOCUMENTS:
+            values = dict(doc_data)
+            values.setdefault("source_level", _SOURCE_LEVEL_BY_TYPE[values["source_type"]])
+            values.setdefault("received_at", values["collected_at"])
+            values.setdefault("source_metadata", {})
             result = await self.session.execute(
                 select(RawDocument).where(
-                    RawDocument.platform == doc_data["platform"],
-                    RawDocument.source_id == doc_data["source_id"],
+                    RawDocument.tenant_id == values["tenant_id"],
+                    RawDocument.platform == values["platform"],
+                    RawDocument.source_id == values["source_id"],
                 )
             )
             if result.scalar_one_or_none():
@@ -62,14 +74,15 @@ class SeedImporter:
 
             result = await self.session.execute(
                 select(RawDocument).where(
-                    RawDocument.content_hash == doc_data["content_hash"]
+                    RawDocument.tenant_id == values["tenant_id"],
+                    RawDocument.content_hash == values["content_hash"],
                 )
             )
             if result.scalar_one_or_none():
                 skipped += 1
                 continue
 
-            self.session.add(RawDocument(**doc_data))
+            self.session.add(RawDocument(**values))
             inserted += 1
         return {"inserted": inserted, "skipped": skipped}
 

@@ -85,10 +85,13 @@ class EventMetricInputs:
     covered_platform_count: int
     expected_platform_count: int | None
     previous_heat: float | None
-    impact: float | None
-    sentiment_severity: float | None
-    exposure: float | None
-    uncertainty: float | None
+    source_quality: float
+    independent_source_ratio: float
+    novelty: float
+    market_relevance: float
+    potential_impact: float
+    market_response: float | None
+    data_completeness: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -103,24 +106,29 @@ class EventMetricResult:
     heat: float
     heat_completeness: float
     momentum: float | None
-    risk: float | None
-    risk_completeness: float
-    rule_version: str
+    raw_score: float
+    scoring_completeness: float
+    scoring_version: str
 
 
 @dataclass(frozen=True, slots=True)
 class MetricPolicy:
-    version: str = "event-metrics-v1"
+    version: str = "deterministic-scoring-v1"
     volume_weight: float = 0.20
     growth_weight: float = 0.25
     engagement_weight: float = 0.15
     diversity_weight: float = 0.15
     authority_weight: float = 0.15
     coverage_weight: float = 0.10
-    impact_weight: float = 0.35
-    sentiment_weight: float = 0.20
-    exposure_weight: float = 0.30
-    uncertainty_weight: float = 0.15
+    source_quality_score_weight: float = 0.12
+    independent_source_score_weight: float = 0.10
+    heat_score_weight: float = 0.12
+    momentum_score_weight: float = 0.08
+    novelty_score_weight: float = 0.08
+    market_relevance_score_weight: float = 0.15
+    potential_impact_score_weight: float = 0.20
+    market_response_score_weight: float = 0.10
+    data_completeness_score_weight: float = 0.05
     volume_saturation_count: int = 1_000
     growth_sensitivity: float = 1.0
 
@@ -133,16 +141,21 @@ class MetricPolicy:
             + self.authority_weight
             + self.coverage_weight
         )
-        risk_weight = (
-            self.impact_weight
-            + self.sentiment_weight
-            + self.exposure_weight
-            + self.uncertainty_weight
+        score_weight = (
+            self.source_quality_score_weight
+            + self.independent_source_score_weight
+            + self.heat_score_weight
+            + self.momentum_score_weight
+            + self.novelty_score_weight
+            + self.market_relevance_score_weight
+            + self.potential_impact_score_weight
+            + self.market_response_score_weight
+            + self.data_completeness_score_weight
         )
         if not math.isclose(heat_weight, 1.0, abs_tol=1e-9):
             raise ValueError("heat weights must sum to 1")
-        if not math.isclose(risk_weight, 1.0, abs_tol=1e-9):
-            raise ValueError("risk weights must sum to 1")
+        if not math.isclose(score_weight, 1.0, abs_tol=1e-9):
+            raise ValueError("scoring weights must sum to 1")
         if self.volume_saturation_count <= 0 or self.growth_sensitivity <= 0:
             raise ValueError("metric scale parameters must be positive")
 
@@ -187,7 +200,7 @@ class MetricPolicy:
         if inputs.previous_heat is not None:
             _unit_interval("previous_heat", inputs.previous_heat)
         momentum = None if inputs.previous_heat is None else heat - inputs.previous_heat
-        risk, risk_completeness = self._risk(inputs)
+        raw_score, scoring_completeness = self._score(inputs, heat, momentum)
         return EventMetricResult(
             volume=volume,
             growth_z=z_score,
@@ -199,9 +212,9 @@ class MetricPolicy:
             heat=heat,
             heat_completeness=heat_completeness,
             momentum=momentum,
-            risk=risk,
-            risk_completeness=risk_completeness,
-            rule_version=self.version,
+            raw_score=raw_score,
+            scoring_completeness=scoring_completeness,
+            scoring_version=self.version,
         )
 
     def _coverage(self, covered: int, expected: int | None) -> float | None:
@@ -211,22 +224,40 @@ class MetricPolicy:
             raise ValueError("platform coverage counts are inconsistent")
         return covered / expected
 
-    def _risk(self, inputs: EventMetricInputs) -> tuple[float | None, float]:
+    def _score(
+        self,
+        inputs: EventMetricInputs,
+        heat: float,
+        momentum: float | None,
+    ) -> tuple[float, float]:
         factors = {
-            "impact": inputs.impact,
-            "sentiment": inputs.sentiment_severity,
-            "exposure": inputs.exposure,
-            "uncertainty": inputs.uncertainty,
+            "source_quality": inputs.source_quality,
+            "independent_sources": inputs.independent_source_ratio,
+            "heat": heat,
+            "momentum": None if momentum is None else (momentum + 1.0) / 2.0,
+            "novelty": inputs.novelty,
+            "market_relevance": inputs.market_relevance,
+            "potential_impact": inputs.potential_impact,
+            "market_response": inputs.market_response,
+            "data_completeness": inputs.data_completeness,
         }
         for name, value in factors.items():
             if value is not None:
                 _unit_interval(name, value)
-        return _weighted_available(
+        score, completeness = _weighted_available(
             factors,
             {
-                "impact": self.impact_weight,
-                "sentiment": self.sentiment_weight,
-                "exposure": self.exposure_weight,
-                "uncertainty": self.uncertainty_weight,
+                "source_quality": self.source_quality_score_weight,
+                "independent_sources": self.independent_source_score_weight,
+                "heat": self.heat_score_weight,
+                "momentum": self.momentum_score_weight,
+                "novelty": self.novelty_score_weight,
+                "market_relevance": self.market_relevance_score_weight,
+                "potential_impact": self.potential_impact_score_weight,
+                "market_response": self.market_response_score_weight,
+                "data_completeness": self.data_completeness_score_weight,
             },
         )
+        if score is None:
+            raise ValueError("required Rule 3 factors must make raw_score calculable")
+        return score, completeness

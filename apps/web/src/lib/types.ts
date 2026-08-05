@@ -1,77 +1,76 @@
-/**
- * RiskTrace 前端领域类型。
- * 骨架阶段作为 mock 数据 + 组件 props 的 single source of truth；
- * 后续接后端时可与 openapi-typescript 生成产物合并。
- */
+/** RiskTrace 前端展示契约。权威评分和分析结论只能来自后端。 */
 
-export type RiskLevel = "high" | "mid" | "low";
+export type Availability = "available" | "not_generated" | "degraded";
+export type ScoreStatus = "complete" | "degraded" | "unavailable";
 
-/** 数据源状态（用于 stale/degraded 标记） */
 export interface DataFreshness {
   staleMinutes?: number;
-  updatedAt: string; // ISO
+  updatedAt: string;
 }
 
-/* ---------------------------------------------------------------
- * 首页：事件流卡片
- * ------------------------------------------------------------- */
+export interface ScoreInterval {
+  lowerBound: number;
+  upperBound: number;
+}
+
+export interface EventScore {
+  status: ScoreStatus;
+  rawScore: number | null;
+  calibratedScore: number | null;
+  confidence: number | null;
+  scoreInterval: ScoreInterval | null;
+  scoringVersion: string | null;
+  calibrationVersion: string | null;
+  calculationId: string | null;
+  scoreCalculationId: string | null;
+  degradationReasons: string[];
+}
 
 export interface EventSummary {
   id: string;
   title: string;
-  risk: RiskLevel;
-  publishedAt: string; // ISO
+  status: string;
+  publishedAt: string;
   sourceCount: number;
   authoritativeSourceCount: number;
-  /** 热度变化百分比，可正可负 */
-  heatChangePercent: number;
-  /** 24 小时热度采样（24 个点），用于 sparkline */
-  sparkline: number[];
-  /** 净情绪 [-1, 1] */
-  sentiment: number;
-  /** 来源多样性 [0, 1] */
-  diversity: number;
-  reviewed: { done: number; total: number };
+  sourceBreakdown: Record<string, number>;
+  score: EventScore;
   freshness?: DataFreshness;
 }
 
-/* ---------------------------------------------------------------
- * 工作台：单事件完整视图
- * ------------------------------------------------------------- */
-
-export interface EventDetail {
-  id: string;
-  title: string;
-  risk: RiskLevel;
-  publishedAt: string;
-  version: number;
+export interface EventDetail extends EventSummary {
   timeline: TimelinePoint[];
-  clusters: OpinionCluster[];
+  opinions: OpinionAttribution[];
   graph: TransmissionGraph;
-  impact: ImpactMatrix;
   evidence: EvidenceItem[];
-  llmAvailable: boolean;
-  freshness?: DataFreshness;
+  availability: {
+    evidence: Availability;
+    opinions: Availability;
+    transmission: Availability;
+    impact: Availability;
+    report: Availability;
+  };
 }
 
 export interface TimelinePoint {
   id: string;
   timestamp: string;
-  heat: number;
-  sentiment: number;
-  /** AI 抽取的转折点标签 */
+  documentCount: number;
+  sentiment: number | null;
   label?: string;
   evidenceIds: string[];
 }
 
-export interface OpinionCluster {
+export interface OpinionAttribution {
   id: string;
-  label: string;
-  /** 支持度 [0, 1] */
-  support: number;
-  representativeExcerpt: string;
-  representativeSource: string;
-  representativeAt: string;
+  stance: string;
+  emotion: string;
+  reason: string;
+  claimType: string;
+  confidence: number;
+  excerpt: string;
+  source: string;
+  publishedAt: string;
   authoritative: boolean;
   evidenceIds: string[];
 }
@@ -87,59 +86,37 @@ export interface TransmissionNode {
   id: string;
   label: string;
   type: TransmissionNodeType;
-  risk: RiskLevel;
 }
 
 export interface TransmissionEdge {
   id: string;
   source: string;
   target: string;
-  /** 权重 [0, 1] */
-  weight: number;
-  confirmed: boolean;
+  confidence: number;
+  status: string;
+  mechanism: string;
+  direction: string;
+  horizon: string;
   evidenceIds: string[];
 }
-
-export interface ImpactMatrix {
-  rowsLabel: string;
-  colsLabel: string;
-  rows: string[]; // 受影响主体
-  cols: string[]; // 维度：价格、波动率、情绪、舆情量
-  /** cells[rowIdx][colIdx] ∈ [-1, 1]，符号表示正负影响 */
-  cells: number[][];
-}
-
-/* ---------------------------------------------------------------
- * 证据
- * ------------------------------------------------------------- */
 
 export interface EvidenceItem {
   id: string;
   source: string;
-  sourceTier: "authoritative" | "media" | "social";
+  sourceTier: "authoritative" | "media" | "social" | "market";
   publishedAt: string;
   title: string;
-  /** 完整正文（可能是快照） */
   body: string;
-  /** AI 引用的句子片段（用于高亮） */
   citedSpans: string[];
   linkUrl?: string;
-  /** 链接是否可访问 */
-  linkAlive: boolean;
-  /** 是否机器翻译 */
-  machineTranslated: boolean;
-  /** 快照采集时间 */
   capturedAt: string;
+  collectionMethod: string;
+  licenseScope: string;
 }
 
-/* ---------------------------------------------------------------
- * 首页顶部指标
- * ------------------------------------------------------------- */
-
 export interface PlatformPulse {
+  totalEvents: number;
   activeEvents: number;
-  highRiskEvents: number;
-  pendingReview: number;
-  /** 过去 24h 热度峰值曲线（用于 sparkline） */
-  heatWave: number[];
+  scoredEvents: number;
+  documentCount: number;
 }

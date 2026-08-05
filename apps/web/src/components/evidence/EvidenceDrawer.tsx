@@ -10,53 +10,29 @@ import { HighlightedText } from "./HighlightedText";
 import styles from "./EvidenceDrawer.module.css";
 
 const tierLabel = {
-  authoritative: "权威",
-  media: "媒体",
+  authoritative: "事实",
+  media: "新闻",
   social: "社交",
+  market: "行情",
 } as const;
-
-type EvidenceAction = "included" | "excluded" | "flagged";
-
-const actionLabel: Record<EvidenceAction, string> = {
-  included: "已纳入分析",
-  excluded: "已排除",
-  flagged: "已标记",
-};
 
 export function EvidenceDrawer() {
   const { isOpen, items, close } = useEvidence();
-  const [actions, setActions] = useState<Record<string, EvidenceAction>>({});
   const [pickedId, setPickedId] = useState<string | null>(null);
-
-  function setAction(id: string, next: EvidenceAction) {
-    setActions((prev) => {
-      // 二次点击同一按钮 = 撤销
-      if (prev[id] === next) {
-        const rest = { ...prev };
-        delete rest[id];
-        return rest;
-      }
-      return { ...prev, [id]: next };
-    });
-  }
 
   useEffect(() => {
     if (!isOpen) return;
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") close();
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === "Escape") close();
     }
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [isOpen, close]);
 
-  // isOpen 初始为 false，所以 SSR 首帧永远走这一支；只有客户端交互后才会真正渲染 portal
-  if (!isOpen || items.length === 0) return null;
-  if (typeof document === "undefined") return null;
+  if (!isOpen || items.length === 0 || typeof document === "undefined") return null;
 
-  // 优先使用用户主动选中的，否则默认第一条（无 effect）
   const activeItem =
-    (pickedId ? items.find((i) => i.id === pickedId) : undefined) ?? items[0];
-  const activeAction = actions[activeItem.id];
+    (pickedId ? items.find((item) => item.id === pickedId) : undefined) ?? items[0];
 
   return createPortal(
     <>
@@ -80,47 +56,30 @@ export function EvidenceDrawer() {
         </header>
 
         <div className={styles.body}>
-          {/* --- 左栏：原文清单 --- */}
           <nav className={styles.list} aria-label="原文列表">
-            {items.map((item) => {
-              const action = actions[item.id];
-              const isActive = item.id === activeItem.id;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={`${styles.listItem} ${isActive ? styles.listItemActive : ""} ${action ? styles[`listItem-${action}`] : ""}`}
-                  onClick={() => setPickedId(item.id)}
-                >
-                  <span
-                    className={`${styles.listTier} ${styles[`tier-${item.sourceTier}`]}`}
-                  >
-                    {tierLabel[item.sourceTier]}
-                  </span>
-                  <span className={styles.listSource}>{item.source}</span>
-                  <span className={styles.listTime} data-numeric>
-                    {formatTime(item.publishedAt)}
-                  </span>
-                  <span className={styles.listTitle}>{item.title}</span>
-                  {action && (
-                    <span
-                      className={styles.listActionDot}
-                      data-action={action}
-                      aria-label={actionLabel[action]}
-                    />
-                  )}
-                </button>
-              );
-            })}
+            {items.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={`${styles.listItem} ${item.id === activeItem.id ? styles.listItemActive : ""}`}
+                onClick={() => setPickedId(item.id)}
+              >
+                <span className={`${styles.listTier} ${styles[`tier-${item.sourceTier}`]}`}>
+                  {tierLabel[item.sourceTier]}
+                </span>
+                <span className={styles.listSource}>{item.source}</span>
+                <span className={styles.listTime} data-numeric>
+                  {formatTime(item.publishedAt)}
+                </span>
+                <span className={styles.listTitle}>{item.title}</span>
+              </button>
+            ))}
           </nav>
 
-          {/* --- 右栏：当前选中原文详情 --- */}
           <article className={styles.detail}>
             <header className={styles.detailHead}>
               <div className={styles.detailMeta}>
-                <span
-                  className={`${styles.tier} ${styles[`tier-${activeItem.sourceTier}`]}`}
-                >
+                <span className={`${styles.tier} ${styles[`tier-${activeItem.sourceTier}`]}`}>
                   {tierLabel[activeItem.sourceTier]}
                 </span>
                 <span className={styles.source}>{activeItem.source}</span>
@@ -128,23 +87,13 @@ export function EvidenceDrawer() {
                   {formatDateTime(activeItem.publishedAt)}
                 </span>
               </div>
-              {activeAction && (
-                <span className={styles.actionTag} data-action={activeAction}>
-                  {actionLabel[activeAction]}
-                </span>
-              )}
             </header>
 
             <h3 className={styles.title}>{activeItem.title}</h3>
 
-            {!activeItem.linkAlive && (
-              <p className={styles.notice}>
-                链接不可达 · 显示采集时的文本快照
-              </p>
-            )}
-            {activeItem.machineTranslated && (
-              <p className={styles.notice}>本段为机器翻译 · 仅供参考</p>
-            )}
+            {!activeItem.linkUrl ? (
+              <p className={styles.notice}>来源未提供可访问链接，显示采集文本快照。</p>
+            ) : null}
 
             <div className={styles.detailBody}>
               <HighlightedText
@@ -153,47 +102,33 @@ export function EvidenceDrawer() {
               />
             </div>
 
-            <div className={styles.actions}>
-              <button
-                type="button"
-                className={`${styles.actionBtn} ${styles.include}`}
-                onClick={() => setAction(activeItem.id, "included")}
-                aria-pressed={activeAction === "included"}
-              >
-                <span aria-hidden="true">✓</span> 纳入分析
-              </button>
-              <button
-                type="button"
-                className={`${styles.actionBtn} ${styles.exclude}`}
-                onClick={() => setAction(activeItem.id, "excluded")}
-                aria-pressed={activeAction === "excluded"}
-              >
-                <span aria-hidden="true">✗</span> 排除
-              </button>
-              <button
-                type="button"
-                className={`${styles.actionBtn} ${styles.flag}`}
-                onClick={() => setAction(activeItem.id, "flagged")}
-                aria-pressed={activeAction === "flagged"}
-              >
-                <span aria-hidden="true">⚑</span> 标记
-              </button>
-            </div>
+            <dl className={styles.provenance}>
+              <div>
+                <dt>采集时间</dt>
+                <dd data-numeric>{formatDateTime(activeItem.capturedAt)}</dd>
+              </div>
+              <div>
+                <dt>采集方式</dt>
+                <dd>{activeItem.collectionMethod}</dd>
+              </div>
+              <div>
+                <dt>许可范围</dt>
+                <dd>{activeItem.licenseScope}</dd>
+              </div>
+            </dl>
 
             <footer className={styles.itemFoot}>
-              <span data-numeric>
-                快照 · {formatDateTime(activeItem.capturedAt)}
-              </span>
-              {activeItem.linkUrl && activeItem.linkAlive && (
+              <span data-numeric>evidence_id · {activeItem.id}</span>
+              {activeItem.linkUrl ? (
                 <a
                   href={activeItem.linkUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={styles.sourceLink}
                 >
-                  源链接 ↗
+                  打开源链接 ↗
                 </a>
-              )}
+              ) : null}
             </footer>
           </article>
         </div>
