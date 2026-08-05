@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from collections import Counter
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +21,8 @@ from risktrace.db.models import (
     RawDocument,
     TransmissionEdge,
 )
+
+EmitFn = Callable[[str, dict[str, Any]], Awaitable[None]]
 
 DIRECTION_ORDER = {"positive": 0, "uncertain": 1, "negative": 2}
 HORIZON_ORDER = {"immediate": 0, "short": 1, "medium": 2, "long": 3}
@@ -53,6 +58,9 @@ class ImpactRow:
 async def compute_impact_matrix(
     event_id: uuid.UUID,
     session: AsyncSession,
+    *,
+    emit: EmitFn | None = None,
+    row_delay: float = 0.0,
 ) -> list[ImpactRow]:
     tenant_id = get_demo_tenant_id()
 
@@ -129,7 +137,15 @@ async def compute_impact_matrix(
     fact_doc_ids = {d.id for d in doc_rows if d.source_type in ("fact", "news")}
 
     rows: list[ImpactRow] = []
-    for entity_id in sorted(all_entity_ids, key=str):
+    ordered_entities = sorted(all_entity_ids, key=str)
+    total_candidates = len(ordered_entities)
+    if emit is not None:
+        await emit(
+            "matrix_scan_start",
+            {"total": total_candidates},
+        )
+
+    for cursor, entity_id in enumerate(ordered_entities, start=1):
         entity = entities_by_id.get(entity_id)
         if entity is None:
             continue
@@ -138,6 +154,11 @@ async def compute_impact_matrix(
         entity_ops = entity_opinion_map.get(entity_id, [])
 
         if not entity_edges and not entity_ops:
+            if emit is not None:
+                await emit(
+                    "entity_skipped",
+                    {"name": entity.name, "index": cursor, "total": total_candidates},
+                )
             continue
 
         incoming_dirs = [
@@ -198,24 +219,39 @@ async def compute_impact_matrix(
             2,
         )
 
-        rows.append(
-            ImpactRow(
-                entity_id=entity_id,
-                entity_name=entity.name,
-                entity_type=entity.entity_type,
-                direction=direction,
-                impact_strength=impact_strength,
-                business_exposure=business_exposure,
-                opinion_support=opinion_support,
-                fact_support=fact_support,
-                time_horizon=time_horizon,
-                composite_confidence=composite_confidence,
-                edge_count=edge_count,
-                opinion_count=opinion_count,
-                evidence_count=len(evidence_ids),
-                evidence_ids=evidence_ids,
-            )
+        row = ImpactRow(
+            entity_id=entity_id,
+            entity_name=entity.name,
+            entity_type=entity.entity_type,
+            direction=direction,
+            impact_strength=impact_strength,
+            business_exposure=business_exposure,
+            opinion_support=opinion_support,
+            fact_support=fact_support,
+            time_horizon=time_horizon,
+            composite_confidence=composite_confidence,
+            edge_count=edge_count,
+            opinion_count=opinion_count,
+            evidence_count=len(evidence_ids),
+            evidence_ids=evidence_ids,
         )
+        rows.append(row)
+
+        if emit is not None:
+            await emit(
+                "entity_scored",
+                {
+                    "index": cursor,
+                    "total": total_candidates,
+                    "name": entity.name,
+                    "direction": direction,
+                    "score": composite_confidence,
+                    "edge_count": edge_count,
+                    "opinion_count": opinion_count,
+                },
+            )
+            if row_delay > 0:
+                await asyncio.sleep(row_delay)
 
     rows.sort(key=lambda r: r.composite_confidence, reverse=True)
     return rows

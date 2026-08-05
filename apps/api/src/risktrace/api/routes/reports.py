@@ -1,7 +1,13 @@
+import asyncio
+import contextlib
+import json
+import logging
 import uuid
-from typing import Annotated
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import StreamingResponse
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from risktrace.api.schemas.events import EvidenceItem
@@ -17,12 +23,24 @@ from risktrace.api.schemas.reports import (
     SnapshotSummary,
 )
 from risktrace.core.demo import get_demo_tenant_id
+from risktrace.db.models import Event
 from risktrace.db.session import get_db
+from risktrace.reports.pipeline import ReportPipeline
 from risktrace.reports.service import create_report_for_event, get_report_detail
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 DemoTenantId = Annotated[uuid.UUID, Depends(get_demo_tenant_id)]
 DbSession = Annotated[AsyncSession, Depends(get_db)]
+
+HEARTBEAT_INTERVAL_SECONDS = 5.0
+SENTINEL: tuple[str, dict[str, Any]] = ("__done__", {})
+
+
+def _sse(event: str, data: dict[str, Any]) -> bytes:
+    body = json.dumps(data, ensure_ascii=False, default=str)
+    return f"event: {event}\ndata: {body}\n\n".encode()
 
 
 @router.post("", response_model=ReportCreateResponse, status_code=201)
@@ -127,4 +145,83 @@ async def get_report(
             EvidenceItem.model_validate(item.model_dump(mode="json"))
             for item in payload.evidence
         ],
+    )
+
+
+@router.post("/stream")
+async def create_report_stream(
+    request: Request,
+    body: ReportCreateRequest,
+    tenant_id: DemoTenantId,
+    db: DbSession,
+) -> StreamingResponse:
+    """SSE 流：把报告生成的 9 个阶段实时推给前端。
+
+    产生的事件类型与 ``/events/{id}/analyze/stream`` 保持一致：
+    ``stage_start`` / ``stage_progress`` / ``stage_done`` / ``stage_error`` /
+    ``llm_start`` / ``llm_delta`` / ``llm_done`` / ``done`` / ``fatal``。
+    ``done`` 的 payload 里带 ``report_id``，供前端拿去 push 到详情页。
+    """
+
+    event = await db.scalar(
+        select(Event).where(Event.id == body.event_id, Event.tenant_id == tenant_id)
+    )
+    if event is None:
+        raise HTTPException(status_code=404, detail="Event not found")
+
+    queue: asyncio.Queue[tuple[str, dict[str, Any]]] = asyncio.Queue(maxsize=128)
+
+    async def emit(event_name: str, payload: dict[str, Any]) -> None:
+        await queue.put((event_name, payload))
+
+    pipeline = ReportPipeline(
+        session=db,
+        tenant_id=tenant_id,
+        event_id=body.event_id,
+        emit=emit,
+    )
+
+    async def run_and_close() -> None:
+        try:
+            await pipeline.run()
+        except Exception as exc:  # noqa: BLE001 -- surface via SSE, no crash
+            logger.exception("Report pipeline crashed")
+            with contextlib.suppress(Exception):
+                await queue.put(("fatal", {"error": str(exc)}))
+        finally:
+            await queue.put(SENTINEL)
+
+    async def event_stream():
+        task = asyncio.create_task(run_and_close())
+        try:
+            while True:
+                if await request.is_disconnected():
+                    task.cancel()
+                    break
+                try:
+                    event_name, payload = await asyncio.wait_for(
+                        queue.get(),
+                        timeout=HEARTBEAT_INTERVAL_SECONDS,
+                    )
+                except TimeoutError:
+                    yield b": heartbeat\n\n"
+                    continue
+
+                if event_name == SENTINEL[0]:
+                    break
+                yield _sse(event_name, payload)
+        finally:
+            if not task.done():
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await task
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
     )

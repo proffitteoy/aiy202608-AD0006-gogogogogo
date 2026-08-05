@@ -5,6 +5,7 @@ import html
 import json
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -429,7 +430,8 @@ def _build_recommendation_items(
                 "recommendation-impact",
                 (
                     f"建议优先复核 {top_impact.entity_name} 的暴露链路与业务映射，"
-                    f"当前冻结快照已将其列为 {DIRECTION_LABELS.get(top_impact.direction, top_impact.direction)} 方向的"
+                    "当前冻结快照已将其列为 "
+                    f"{DIRECTION_LABELS.get(top_impact.direction, top_impact.direction)} 方向的"
                     "重点对象；研究员应结合主营业务、时间周期和新增证据，确认影响是否足以进入正式跟踪池。"
                 ),
                 evidence_ids=top_impact.evidence_ids[:6] or summary_evidence_ids[:3],
@@ -852,6 +854,99 @@ async def create_report_for_event(
     await session.commit()
     await session.refresh(report)
     return report
+
+
+# ---------------------------------------------------------------------------
+# Public helpers for the report pipeline
+# ---------------------------------------------------------------------------
+
+
+def render_baseline(payload: AnalysisSnapshotPayload) -> RenderedReport:
+    """产出 7 段全模板的 baseline，pipeline 会把其中 LLM 段替换后再 finalize。"""
+
+    return _render_report(payload)
+
+
+def build_llm_section(
+    *,
+    section_id: str,
+    title: str,
+    statements: list[Any],
+    fallback_status: str = "complete",
+    score_calculation_ids: list[uuid.UUID] | None = None,
+) -> ReportSection:
+    """把 ``valid_statements`` 的结果包成 ``ReportSection``。
+
+    ``statements`` 元素只需要有 ``text`` 与 ``evidence_ids`` 属性（``LLMStatementLike``）。
+    """
+
+    if not statements:
+        raise ValueError(f"LLM section {section_id} produced no valid statements")
+
+    items = [
+        ReportStatement(
+            id=f"{section_id}-{index}",
+            text=item.text,
+            evidence_ids=list(item.evidence_ids),
+            calculation_ids=list(score_calculation_ids or []) if section_id == "risk-notes"
+            else [],
+        )
+        for index, item in enumerate(statements)
+    ]
+    return ReportSection(
+        id=section_id,
+        title=title,
+        status=fallback_status,
+        items=items,
+    )
+
+
+def replace_section(rendered: RenderedReport, section: ReportSection) -> RenderedReport:
+    """返回一个新 ``RenderedReport``，其中同 id 的 section 被换成新的。"""
+
+    sections = [section if item.id == section.id else item for item in rendered.sections]
+    return rendered.model_copy(update={"sections": sections})
+
+
+def finalize_report(
+    rendered: RenderedReport,
+    *,
+    extra_degradation: list[str] | None = None,
+) -> RenderedReport:
+    """基于 sections 重新汇总 evidence_ids / calculation_ids / body_html。"""
+
+    all_evidence_ids = sorted(
+        {
+            evidence_id
+            for section in rendered.sections
+            for item in section.items
+            for evidence_id in item.evidence_ids
+        },
+        key=str,
+    )
+    all_calculation_ids = sorted(
+        {
+            calculation_id
+            for section in rendered.sections
+            for item in section.items
+            for calculation_id in item.calculation_ids
+        },
+        key=str,
+    )
+    degradation = sorted(
+        set(list(rendered.degradation_reasons) + list(extra_degradation or []))
+    )
+    body_html = _render_html(rendered.title, rendered.summary, rendered.sections)
+    status = "degraded" if degradation else "complete"
+    return rendered.model_copy(
+        update={
+            "evidence_ids": all_evidence_ids,
+            "calculation_ids": all_calculation_ids,
+            "degradation_reasons": degradation,
+            "status": status,
+            "body_html": body_html,
+        }
+    )
 
 
 async def get_report_detail(

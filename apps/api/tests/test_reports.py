@@ -135,3 +135,62 @@ def test_openapi_exposes_report_creation_and_read_routes() -> None:
 
     assert "/api/reports" in paths
     assert "/api/reports/{report_id}" in paths
+    assert "/api/reports/stream" in paths
+
+
+def test_valid_statements_drops_illegal_evidence_ids() -> None:
+    from risktrace.reports.agent import valid_statements
+    from risktrace.reports.prompts import LLMSectionOutput, LLMStatement
+
+    allowed = uuid.UUID("10000000-0000-0000-0000-000000000001")
+    illegal = uuid.UUID("99999999-9999-9999-9999-999999999999")
+    output = LLMSectionOutput(
+        statements=[
+            LLMStatement(text="这是一条合法陈述引用真实证据 A B C D E F", evidence_ids=[allowed]),
+            LLMStatement(text="这条陈述引用了不存在的证据 X Y Z 一 二 三", evidence_ids=[illegal]),
+            LLMStatement(
+                text="这条陈述部分合法只保留 allowed 一二三四五六七八九十",
+                evidence_ids=[illegal, allowed],
+            ),
+        ]
+    )
+    cleaned = valid_statements(output, allowed_evidence_ids=frozenset({allowed}))
+    # 第 2 条整体非法被丢；第 1 条与第 3 条保留，第 3 条内部只留下 allowed。
+    assert len(cleaned) == 2
+    assert all(allowed in item.evidence_ids for item in cleaned)
+    assert all(illegal not in item.evidence_ids for item in cleaned)
+
+
+def test_llm_section_replaces_baseline_and_finalize_recomputes_totals() -> None:
+    from risktrace.reports.agent import LLMStatementLike
+    from risktrace.reports.service import (
+        build_llm_section,
+        finalize_report,
+        render_baseline,
+        replace_section,
+    )
+
+    payload = _payload()
+    baseline = render_baseline(payload)
+    evidence_id = payload.evidence[0].id
+
+    llm_section = build_llm_section(
+        section_id="overview",
+        title="事件摘要",
+        statements=[
+            LLMStatementLike(
+                text="AI 生成的摘要陈述条一二三四五六七八九十",
+                evidence_ids=[evidence_id],
+            )
+        ],
+        fallback_status="complete",
+    )
+    updated = replace_section(baseline, llm_section)
+    rendered = finalize_report(updated, extra_degradation=["overview_llm_unavailable: X"])
+
+    overview = next(section for section in rendered.sections if section.id == "overview")
+    assert overview.items[0].text.startswith("AI 生成的摘要陈述")
+    assert evidence_id in rendered.evidence_ids
+    assert "overview_llm_unavailable: X" in rendered.degradation_reasons
+    assert rendered.status == "degraded"
+    assert rendered.body_html.startswith("<article")

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { MouseEvent } from "react";
 
 import {
   formatEventStatus,
@@ -12,6 +13,7 @@ import styles from "./EventCard.module.css";
 
 type Props = {
   event: EventSummary;
+  onHide?: (id: string) => void;
 };
 
 const SOURCE_TYPE_COLORS: Record<string, string> = {
@@ -37,7 +39,12 @@ function formatHourMinute(iso: string): string {
   });
 }
 
-export function EventCard({ event }: Props) {
+export function EventCard({ event, onHide }: Props) {
+  const handleHide = (e: MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onHide?.(event.id);
+  };
   const total = Object.values(event.sourceBreakdown).reduce((sum, v) => sum + v, 0) || 1;
   const segments = Object.entries(event.sourceBreakdown).sort((a, b) => b[1] - a[1]);
   const isActive = event.status.toLowerCase() === "active";
@@ -81,13 +88,13 @@ export function EventCard({ event }: Props) {
 
       <div className={styles.scores}>
         <div className={styles.scoreCell}>
-          <span className={styles.scoreLabel}>R3</span>
+          <span className={styles.scoreLabel}>原始评分</span>
           <span className={styles.scoreValue} data-numeric>
             {formatScore(event.score.rawScore)}
           </span>
         </div>
         <div className={styles.scoreCell}>
-          <span className={styles.scoreLabel}>R4</span>
+          <span className={styles.scoreLabel}>校准评分</span>
           <span className={styles.scoreValue} data-numeric>
             {formatScore(event.score.calibratedScore)}
           </span>
@@ -105,6 +112,18 @@ export function EventCard({ event }: Props) {
           </span>
         </div>
       </div>
+
+      {onHide ? (
+        <button
+          type="button"
+          className={styles.hideButton}
+          onClick={handleHide}
+          aria-label={`从演示中隐藏事件：${event.title}`}
+          title="从演示中隐藏"
+        >
+          ×
+        </button>
+      ) : null}
 
       <span className={styles.chevron} aria-hidden="true">
         ›

@@ -3,6 +3,27 @@
   padding: var(--space-6);
 }
 
+/* 报告详情页单独走深色 editorial 主题，其它页仍保持全站白底。 */
+.page[data-theme="dark"] {
+  --surface-0: oklch(14% 0.012 250);
+  --surface-1: oklch(18% 0.012 250);
+  --surface-2: oklch(22% 0.014 250);
+  --surface-3: oklch(26% 0.014 250);
+  --border-subtle: oklch(30% 0.014 250);
+  --border-strong: oklch(42% 0.018 250);
+  --text-primary: oklch(96% 0.005 250);
+  --text-secondary: oklch(74% 0.010 250);
+  --text-tertiary: oklch(58% 0.014 250);
+  --text-inverse: oklch(14% 0.012 250);
+  --accent: oklch(74% 0.16 250);
+  --accent-hover: oklch(82% 0.16 250);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.5);
+  --shadow-md: 0 6px 20px rgb(0 0 0 / 0.55);
+
+  background: var(--surface-0);
+  color: var(--text-primary);
+}
+
 .shell {
   width: min(1120px, 100%);
   margin: 0 auto;

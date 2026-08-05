@@ -1,13 +1,30 @@
 from functools import lru_cache
+from pathlib import Path
 from uuid import UUID
 
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Walk up from this file to the repo root looking for the first .env we can
+# find. This keeps `uv run` / uvicorn / pytest happy regardless of the CWD
+# they are launched from (repo root, apps/api, or a container mount).
+def _find_env_files() -> tuple[str, ...]:
+    here = Path(__file__).resolve()
+    hits: list[str] = []
+    for parent in here.parents:
+        candidate = parent / ".env"
+        if candidate.exists():
+            hits.append(str(candidate))
+    # pydantic-settings applies files in order, later wins — closer-to-root
+    # (more specific / user-facing) should win, so keep the natural order
+    # produced by walking upward (deepest first, root last is fine because
+    # root .env is the intended source of truth).
+    return tuple(hits)
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_find_env_files() or (".env",),
         env_prefix="RISKTRACE_",
         extra="ignore",
     )

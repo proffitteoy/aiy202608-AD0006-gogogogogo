@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 
+import { useHiddenEventIds } from "@/hooks/use-hidden-event-ids";
 import type { EventSummary } from "@/lib/types";
 
 import { EventCard } from "./EventCard";
@@ -48,6 +49,7 @@ function matchesRange(event: EventSummary, range: RangeKey, now: number): boolea
 export function OverviewStream({ events }: Props) {
   const [query, setQuery] = useState("");
   const [range, setRange] = useState<RangeKey>("all");
+  const { isHidden, hide, restoreAll, hiddenIds, hydrated } = useHiddenEventIds();
 
   const handleFilter = useCallback((q: string, r: RangeKey) => {
     setQuery(q);
@@ -57,15 +59,28 @@ export function OverviewStream({ events }: Props) {
   const filtered = useMemo(() => {
     const now = Date.now();
     return events.filter(
-      (event) => matchesQuery(event, query) && matchesRange(event, range, now),
+      (event) =>
+        !isHidden(event.id) &&
+        matchesQuery(event, query) &&
+        matchesRange(event, range, now),
     );
-  }, [events, query, range]);
+  }, [events, query, range, isHidden]);
+
+  const hiddenCount = hydrated ? hiddenIds.length : 0;
 
   return (
     <>
       <header className={styles.streamHeader}>
         <OverviewToolbar onFilter={handleFilter} />
       </header>
+      {hiddenCount > 0 ? (
+        <div className={styles.hiddenBanner} role="status">
+          <span>已从演示中隐藏 {hiddenCount} 条</span>
+          <button type="button" className={styles.restoreButton} onClick={restoreAll}>
+            全部恢复
+          </button>
+        </div>
+      ) : null}
 
       <section className={styles.tableWrap} aria-label="事件流列表">
         <div className={styles.head}>
@@ -102,7 +117,7 @@ export function OverviewStream({ events }: Props) {
                 className={styles.item}
                 style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
               >
-                <EventCard event={event} />
+                <EventCard event={event} onHide={hide} />
               </div>
             ))}
           </div>

@@ -1,7 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+import {
+  ReportGenerationOverlay,
+  useReportPipeline,
+} from "@/components/report/ReportGenerationOverlay";
 
 import styles from "./ReportLaunchButton.module.css";
 
@@ -9,92 +14,74 @@ type Props = {
   eventId: string;
 };
 
-function normalizeReportError(message: string): string {
-  if (message === "Not Found" || message.includes("HTTP 404")) {
-    return "当前 API 进程未暴露报告接口，请确认后端已重启到包含 /api/reports 的版本。";
-  }
-  if (
-    message.includes("fetch failed") ||
-    message.includes("upstream_unreachable") ||
-    message.includes("网络请求失败")
-  ) {
-    return "Web 代理当前无法连接后端 API，请检查 RISKTRACE_API_URL 和后端进程。";
-  }
-  return message;
-}
-
-function extractErrorMessage(payload: unknown, status: number): string {
-  if (
-    payload &&
-    typeof payload === "object" &&
-    "detail" in payload &&
-    typeof payload.detail === "string"
-  ) {
-    return payload.detail;
-  }
-  return `生成报告失败（HTTP ${status}）`;
-}
+const AUTO_JUMP_MS = 900;
 
 export function ReportLaunchButton({ eventId }: Props) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const anchorRef = useRef<HTMLDivElement | null>(null);
+  const jumpedRef = useRef(false);
 
-  async function handleClick() {
-    setError(null);
-    setIsSubmitting(true);
+  const handleDone = useCallback(
+    (reportId: string) => {
+      if (jumpedRef.current) return;
+      jumpedRef.current = true;
+      window.setTimeout(() => {
+        router.push(`/reports/${reportId}`);
+      }, AUTO_JUMP_MS);
+    },
+    [router],
+  );
 
-    try {
-      const response = await fetch("/api/backend/reports", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({ event_id: eventId, format: "html" }),
-      });
-      const payload = (await response.json().catch(() => null)) as
-        | { id?: string; detail?: string }
-        | null;
+  const pipeline = useReportPipeline(eventId, handleDone);
 
-      if (!response.ok || !payload?.id) {
-        throw new Error(extractErrorMessage(payload, response.status));
-      }
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
 
-      startTransition(() => {
-        router.push(`/reports/${payload.id}`);
-      });
-    } catch (caughtError) {
-      const message =
-        caughtError instanceof Error
-          ? caughtError.message
-          : "生成报告失败，请稍后重试。";
-      setError(
-        normalizeReportError(message),
-      );
-    } finally {
-      setIsSubmitting(false);
+  const start = useCallback(() => {
+    if (pipeline.running) {
+      setOpen(true);
+      return;
     }
-  }
+    jumpedRef.current = false;
+    setOpen(true);
+    void pipeline.start();
+  }, [pipeline]);
 
-  const disabled = isSubmitting || isPending;
+  const label = pipeline.running
+    ? "生成中…"
+    : pipeline.hasRun && !pipeline.hadError
+      ? "重新生成"
+      : "生成报告";
 
   return (
-    <div className={styles.action}>
+    <div className={styles.action} ref={anchorRef}>
       <button
         type="button"
         className={styles.button}
-        onClick={handleClick}
-        disabled={disabled}
-        title="冻结当前 snapshot 并生成 HTML 风险简报"
+        onClick={start}
+        disabled={pipeline.running}
+        title="冻结 snapshot 并让 AI 与模板协同撰写分段报告"
       >
-        {disabled ? "生成中…" : "生成报告"}
+        {label}
       </button>
-      {error ? (
+      {pipeline.fatal ? (
         <p className={styles.error} role="status">
-          {error}
+          {pipeline.fatal}
         </p>
+      ) : null}
+      {open ? (
+        <ReportGenerationOverlay
+          pipeline={pipeline}
+          onClose={() => setOpen(false)}
+          anchorRef={anchorRef}
+        />
       ) : null}
     </div>
   );

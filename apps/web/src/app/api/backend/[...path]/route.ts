@@ -45,6 +45,22 @@ async function forward(request: NextRequest, ctx: { params: Promise<{ path: stri
       if (key.toLowerCase() === "content-encoding") return;
       responseHeaders.set(key, value);
     });
+
+    const contentType = upstream.headers.get("content-type") ?? "";
+    const isStream =
+      contentType.includes("text/event-stream") ||
+      upstream.headers.get("transfer-encoding") === "chunked";
+
+    if (isStream && upstream.body) {
+      responseHeaders.set("Cache-Control", "no-cache, no-transform");
+      responseHeaders.set("X-Accel-Buffering", "no");
+      return new NextResponse(upstream.body, {
+        status: upstream.status,
+        statusText: upstream.statusText,
+        headers: responseHeaders,
+      });
+    }
+
     const buf = await upstream.arrayBuffer();
     return new NextResponse(buf, {
       status: upstream.status,

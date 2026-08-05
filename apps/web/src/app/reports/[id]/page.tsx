@@ -42,7 +42,7 @@ export default async function ReportPage({
 
   return (
     <EvidenceProvider evidence={report.evidence}>
-      <main className={styles.page}>
+      <main className={styles.page} data-theme="dark">
         <div className={styles.shell}>
           <nav className={styles.topbar} aria-label="报告导航">
             <Link href="/">← 返回总览</Link>

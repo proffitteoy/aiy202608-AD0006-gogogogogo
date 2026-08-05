@@ -8,6 +8,21 @@ import pytest
 from risktrace.agents.transmission import TransmissionGraphAgent
 
 
+def _sse_response(payload: dict[str, object]) -> httpx.Response:
+    body = (
+        "data: "
+        + json.dumps(
+            {"choices": [{"delta": {"content": json.dumps(payload)}}]}
+        )
+        + "\n\ndata: [DONE]\n\n"
+    )
+    return httpx.Response(
+        200,
+        headers={"content-type": "text/event-stream"},
+        content=body.encode("utf-8"),
+    )
+
+
 @pytest.mark.asyncio
 async def test_transmission_agent_calls_openai_compatible_chat_completion(
     monkeypatch: pytest.MonkeyPatch,
@@ -33,36 +48,22 @@ async def test_transmission_agent_calls_openai_compatible_chat_completion(
         captured["url"] = str(request.url)
         captured["auth"] = request.headers.get("Authorization")
         captured["body"] = json.loads(request.content.decode("utf-8"))
-        return httpx.Response(
-            200,
-            json={
-                "choices": [
+        return _sse_response(
+            {
+                "edges": [
                     {
-                        "message": {
-                            "content": json.dumps(
-                                {
-                                    "edges": [
-                                        {
-                                            "from_node_type": "event",
-                                            "from_node_id": str(event_id),
-                                            "to_node_type": "entity",
-                                            "to_node_id": str(company_id),
-                                            "mechanism": (
-                                                "政策预期升温后，"
-                                                "市场资金优先追逐电网设备龙头。"
-                                            ),
-                                            "direction": "positive",
-                                            "horizon": "short",
-                                            "evidence_doc_ids": [str(evidence_id)],
-                                            "confidence": 0.82,
-                                        }
-                                    ]
-                                }
-                            )
-                        }
+                        "from_node_type": "event",
+                        "from_node_id": str(event_id),
+                        "to_node_type": "entity",
+                        "to_node_id": str(company_id),
+                        "mechanism": "政策预期升温后，市场资金优先追逐电网设备龙头。",
+                        "direction": "positive",
+                        "horizon": "short",
+                        "evidence_doc_ids": [str(evidence_id)],
+                        "confidence": 0.82,
                     }
                 ]
-            },
+            }
         )
 
     agent = TransmissionGraphAgent(
@@ -111,10 +112,7 @@ async def test_transmission_agent_uses_deepseek_compatible_json_mode(
 
     def handler(request: httpx.Request) -> httpx.Response:
         captured["body"] = json.loads(request.content.decode("utf-8"))
-        return httpx.Response(
-            200,
-            json={"choices": [{"message": {"content": '{"edges": []}'}}]},
-        )
+        return _sse_response({"edges": []})
 
     agent = TransmissionGraphAgent(
         object(),  # type: ignore[arg-type]

@@ -1,4 +1,5 @@
 import { ScoreBadge } from "@/components/overview/ScoreBadge";
+import { AnalysisPipelineTrigger } from "@/components/workbench/AnalysisPipelinePanel";
 import { ReportLaunchButton } from "@/components/workbench/ReportLaunchButton";
 import {
   formatEventStatus,
@@ -65,7 +66,10 @@ export function WorkbenchHeader({ detail, sourceCount }: Props) {
           </div>
         </div>
 
-        <ReportLaunchButton eventId={detail.id} />
+        <div className={styles.actions}>
+          <AnalysisPipelineTrigger eventId={detail.id} />
+          <ReportLaunchButton eventId={detail.id} />
+        </div>
       </div>
     </header>
   );

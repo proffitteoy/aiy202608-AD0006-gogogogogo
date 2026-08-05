@@ -8,6 +8,43 @@
   padding: 0 2px;
 }
 
+/* --- 演示时隐藏卡片的状态条 --- */
+.hiddenBanner {
+  display: inline-flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: var(--space-3);
+  padding: 6px 12px;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  background: color-mix(in oklch, var(--surface-2) 55%, transparent);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+}
+
+.restoreButton {
+  padding: 2px 8px;
+  color: var(--accent);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out-expo);
+}
+
+.restoreButton:hover {
+  border-color: color-mix(in oklch, var(--accent) 55%, transparent);
+}
+
+.restoreButton:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 .streamTitleWrap {
   display: flex;
   flex-direction: column;
